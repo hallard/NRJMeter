@@ -1,0 +1,927 @@
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta charset="UTF-8">
+		<link rel="stylesheet" href="css/nrjmeter.css">
+		<title>ch2i NRJMeter</title>
+	</head>
+	<body>
+	  <div class="container">
+			<!--  Onglets  -->
+			<ul class="nav nav-tabs" id="myTab">
+			 	<li><a href="#tab_sensor" data-toggle="tab"><span class="glyphicon glyphicon-tint">&nbsp;</span>Sensors&nbsp;<span class="badge" id="scharge"></span></a></li>
+			 	<li><a href="#tab_sys" data-toggle="tab"><span class="glyphicon glyphicon-cog">&nbsp;</span>System</a></li>
+			 	<li><a href="#tab_cfg" data-toggle="tab"><span class="glyphicon glyphicon-wrench">&nbsp;</span>Configuration</a></li>
+			 	<li><a href="#tab_fs" data-toggle="tab"><span class="glyphicon glyphicon-folder-open">&nbsp;</span>Filesystem&nbsp;<span class="badge" id="sspiffs"></span></a></li>
+			 	<li><a href="#tab_term" data-toggle="tab"><span class="glyphicon glyphicon-eye-open">&nbsp;</span>Terminal</a></li>
+			 	<h4><span class="label label-pill pull-right" id="connect">...</span><h4>
+			</ul>
+
+			<!-- Contenu des onglets -->
+			<div class="tab-content">
+	  
+				<!-- tab sensors -->
+		    <div class="tab-pane fade in active" id="tab_sensor">
+		   		<h4>Sensors Reading</h4>
+					<div class="row">
+						<div class="form-group">
+							<p class="col-sm-2">Graph refresh rate :</p>
+							<div class="col-sm-9" >
+								<input id="sensors_sld_rfh" name="sensors_sld_rfh" type="text" class="hidden"
+											 data-slider-min="2" 
+											 data-slider-max="300" 
+											 data-slider-step="1" 
+											 data-slider-ticks-snap-bounds="2" 
+  										 data-slider-ticks="[2,15,30,60,120,180,240,300]" 
+											 data-slider-ticks-labels='["2s","15s","30s","1m","2m","3m","4m","5m"]'
+											 data-slider-ticks-positions="[0,14,28,43,57,71,86,100]"
+											 data-slider-tooltip="always"/>
+							</div>
+						</div>
+					</div>
+
+					<div class="panel-group" id="pan_si7021">
+						<div class="panel panel-info">
+							<div class="panel-heading clearfix">
+								<h3 class="panel-title clickable" data-toggle="collapse" data-parent="#tab_sensor" data-target="#col_si7021">
+									Internal Sensor Values (SI7021)&nbsp;&nbsp;&nbsp;
+									<span id="sp_si7021_state" class="label label-pill label-danger"></span>&nbsp;&nbsp;&nbsp;
+									Temperature <span id="sp_si7021_temp" class="label label-pill label-success"></span>&nbsp;&nbsp;&nbsp;
+									Humidity <span id="sp_si7021_hum" class="label label-pill label-info"></span>&nbsp;&nbsp;&nbsp;
+									<span id="sp_si7021_ago"></span>
+									<span class="pull-right glyphicon glyphicon-chevron-down"></span>
+								</h3>
+							</div>
+	            <div class="panel-collapse collapse in" id="col_si7021">
+								<div class="panel-body">
+									<canvas id="si7021_chart" width="800" height="180"></canvas>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="panel-group" id="pan_sht10">
+						<div class="panel panel-info">
+							<div class="panel-heading clearfix">
+								<h3 class="panel-title clickable" data-toggle="collapse" data-parent="#tab_sensor" data-target="#col_sht10">
+									External Sensor Values (SHT10)&nbsp;&nbsp;&nbsp;
+									<span id="sp_sht10_state" class="label label-pill label-danger"></span>&nbsp;&nbsp;&nbsp;
+									Temperature <span id="sp_sht10_temp" class="label label-pill label-success"></span>&nbsp;&nbsp;&nbsp;
+									Humidity <span id="sp_sht10_hum" class="label label-pill label-info"></span>&nbsp;&nbsp;&nbsp;
+									<span id="sp_sht10_ago"></span>
+									<span class="pull-right glyphicon glyphicon-chevron-down"></span>
+								</h3>
+							</div>
+	            <div class="panel-collapse collapse in" id="col_sht10">
+								<div class="panel-body">
+									<canvas id="sht10_chart" width="800" height="180"></canvas>
+								</div>
+							</div>
+						</div>
+					</div>
+
+				</div> <!-- tab pane sensors -->
+
+		  	<!-- tab Systeme -->
+				<div class="tab-pane fade" id="tab_sys">
+					<h4>System data</h4>
+					<table 	data-toggle="table" 
+									class="table table-striped table-condensed" 
+									data-show-refresh="true" 
+									data-show-toggle="true" 
+									data-search="true" 
+									id="tab_sys_data" 
+									data-select-item-name="toolbar2">
+						<thead>
+							<tr>
+								<th data-field="na" data-align="left">Name</th>
+								<th data-field="va" data-align="left">Value</th>
+								</tr>
+						</thead>
+					</table>
+				</div> <!-- tab pane systeme-->
+
+				<!-- tab SPIFFS -->
+				<div class="tab-pane fade" id="tab_fs">
+					<h4>Filesystem</h4>
+					<div>
+						<span style="float:left;width:18ex;text-align:center;">Usage : </span>
+						<div class="progress">
+							<div class="progress-bar progress-bar-success" style="width:0" id="pfsbar">
+								<span class=show id="fs_use">Calculating</span>
+							</div>
+						</div>
+					</div>
+					<!-- SPIFFS table toolbar -->
+					<!--
+					<div id="fs_toolbar">
+		       	<div class="form-inline" role="form">
+              <div class="form-group">
+                <span>Pour ajouter ou remplacer un fichier&nbsp;</span>
+              </div>
+							<div class="form-group">
+						    <div class="dropbase dropfilesmall" id="dz">
+				      		&nbsp;&nbsp;déposer le dans cette zone&nbsp;&nbsp;
+				    		</div>
+							</div>
+		       	</div>
+	       	</div>
+					-->
+					<div class="panel panel-default">
+						<div class="panel-heading">
+							<h3 class="panel-title">SPIFFS Filesystem <span class="pull-right" id="spiffs_version"></span></h3>
+						</div>
+						<div class="panel-body">
+							<table 	data-toggle="table" 
+											data-toolbar="#fs_toolbar"
+											class="table table-striped table-condensed" 
+											data-show-refresh="true" 
+											data-show-columns="true" 
+											data-search="true" 
+											id="tab_fs_data" 
+											data-select-item-name="toolbar4">
+								<thead>
+									<tr>
+										<th data-field="na" data-align="left" data-formatter="fileFormatter">File</th>
+										<th data-field="va" data-align="center" data-sortable="true">Size (Byte)</th>
+										<th data-field="act" data-align="left">Action</th>
+										</tr>
+								</thead>
+							</table>
+						</div>
+					</div>
+					<div class="panel panel-danger">
+						<div class="panel-heading clearfix">
+							<h3 class="panel-title">Firmware or WEB server Update</h3>
+						</div>
+						<div class="panel-body">
+							<div class="row">
+								<form method='POST' id='frm_fw' action='/update' enctype='multipart/form-data'>
+								  <div class="col-xs-9">
+										<div class="input-group">
+											<span class="input-group-btn">
+												<span class="btn btn-info btn-file">Choose file&hellip; 
+													<input id="file_fw" type="file" name="update"></input>
+												</span>
+											</span>
+											<input id="txt_upload_fw" type="text" size="32" class="form-control" placeholder="no .cpp.bin or .spiffs.bin file selected" readonly>
+										</div>
+									</div>
+								  <div class="col-xs-3">
+										<!--<input class="btn btn-danger hide" type="button" id="btn_upload_fw" onclick="Sendfile('fw');" value=""/>-->
+										<input class="btn btn-danger hide" type="button" id="btn_upload_fw" value=""/>
+								  </div>
+								</form>
+							</div>
+							</p>
+							<div id='pgfw' class='hide'>
+								<span id='sfw' style="float:left;width:18ex;text-align:center;"></span>
+								<div class="progress">
+									<div class="progress-bar progress-bar-success" style="width:0" id="pfw">
+										<span id="psfw"></span>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="panel-footer">
+							<p id="fw_info"></p>
+						</div>
+					</div> 
+				</div> <!-- tab pane SPIFFS-->
+
+	 	  	<!-- tab Configuration -->
+		    <div class="tab-pane fade" id="tab_cfg">
+					<h4>System Configuration</h4>
+					<div>
+						<form class="form-horizontal row-border" method="post" data-toggle="validator" id="frm_config" action="">
+							<!-- Panel Config générale -->
+							<div class="panel-group" id="pan_cfg">
+								<div class="panel panel-primary">
+									<input type="hidden" name="save" value="1">
+									<div class="panel-heading clearfix">
+										<h3 class="panel-title clickable" data-toggle="collapse" data-parent="#pan_cfg" data-target="#col_cfg">
+											<span class="glyphicon glyphicon-signal"></span>&nbsp;Wireless Network<span class="pull-right glyphicon glyphicon-chevron-up"></span>
+										</h3>
+									</div>
+			            <div class="panel-collapse collapse in" id="col_cfg">
+									  <div class="panel-body">
+
+
+											<div class="form-group form-inline">
+												<label class="col-sm-3 control-label">Enable Wifi</label>
+												<div class="col-sm-9">
+													<input class="checkbox" id="cfg_wifi" name="cfg_wifi" type="checkbox" data-label-text="Wifi"> Change need Restart</input>
+													<span class="help-block">Wifi will always be enabled for 5 minutes after reset/power on to access configuration.</span>
+												</div>
+											</div>
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Wifi SSID</label>
+												<div class="col-sm-9">
+													<div class="input-group">
+				 										<input type="text" class="form-control" id="ssid" name="ssid" maxlength="32" value="" placeholder="Wifi SSID">
+														<div class="input-group-btn">
+															<button class="btn btn-default dropdown-toggle" type="button" id="btn_scan" data-toggle="modal" data-target="#tab_scan">&nbsp;<span class="glyphicon glyphicon-zoom-in"></span></button>
+													  </div>
+													</div>
+ 													<span class="help-block">Connect this Smart Sensor to existing Wifi network.</span>
+												</div>
+											</div>
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Wifi key</label>
+												<div class="col-sm-9">
+													<input type="password" class="form-control" id="psk" name="psk" maxlength="64" data-toggle="password" placeholder="Wifi key (PSK)">
+ 													<span class="help-block"Connect>Existing Wifi network password.</span>
+												</div>
+									    </div>
+									    <div class="form-group">
+												<label class="col-sm-3 control-label">Smart Sensor Name</label>
+												<div class="col-sm-9">
+													<input type="text" class="form-control" id="host" name="host" maxlength="32" required placeholder="Smart Sensor Module network name">
+													<span class="help-block">Network hostname of this Smart Sensor.</span>
+
+												</div>
+									    </div>
+
+											<div class="form-group form-inline">
+												<label class="col-sm-3 control-label">Access Point</label>
+												<div class="col-sm-9">
+													<input class="checkbox" id="cfg_ap" name="cfg_ap" type="checkbox" data-label-text="AP"> Change need Restart</input>
+													<span class="help-block">When enabled you'll be able to direct connect to this Smart Sensor with Wifi. Note that Access point will always be enabled for 5 minutes after reset/power on to access configuration.</span>
+												</div>
+											</div>
+
+									    <div class="form-group">
+												<label class="col-sm-3 control-label">Access Point SSID</label>
+												<div class="col-sm-9">
+													<input type="text" class="form-control" id="apssid" name="apssid" maxlength="32" placeholder="Smart Sensor Access Point SSID" required>
+													<span class="help-block">Wireless name that will be shown in your Wifi Network list.</span>
+												</div>
+									    </div>
+									    <div class="form-group">
+												<label class="col-sm-3 control-label">Access Point Key</label>
+												<div class="col-sm-9">
+													<input type="text" class="form-control" id="appsk" name="appsk" maxlength="64" data-toggle="password" placeholder="Leave emtpy to have opened unsecure access point">
+													<span class="help-block">Password to connect to Smart Sensor Wifi access point (empty NOT recommended).</span>
+												</div>
+									    </div>
+
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Static Wifi</label>
+												<div class="col-sm-9">
+													<input class="checkbox" id="cfg_static" name="cfg_static" type="checkbox" data-label-text="Static"> Change need Restart</input>
+												</div>
+											</div>
+
+											<div class="form-group form-inline">
+												<label class="col-sm-3 control-label">Static IP / Mask</label>
+												<div class="col-sm-9">
+													<input class="form-control" type="text" id="ip" name="ip" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}">&nbsp;
+													<label>&nbsp;/&nbsp;</label>
+													<input class="form-control" type="text" id="mask" name="mask" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}">
+													Example: 192.168.1.10 / 255.255.255.0</input>
+												</div>
+											</div>
+											<div class="form-group form-inline">
+												<label class="col-sm-3 control-label">Static Gateway / DNS</label>
+												<div class="col-sm-9">
+													<input class="form-control" type="text" id="gw" name="gw" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}">&nbsp;
+													<label>&nbsp;/&nbsp;</label>
+													<input class="form-control" type="text" id="dns" name="dns" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}">
+													Example: 192.168.1.254 / 192.168.1.1</input>
+												</div>
+												
+											</div>
+									  </div> <!-- panel body-->
+										<div class="panel-footer">
+											<div class="text-center">
+												<div class="btn-group">
+													<button type="submit" class="btn btn-default btn-primary">Save</button>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div> <!-- panel config -->
+
+							<!-- Panel Sensors -->
+							<div class="panel-group" id="pan_sensors">
+								<div class="panel panel-warning">
+									<div class="panel-heading clearfix">
+										<h3 class="panel-title clickable" data-toggle="collapse" data-parent="#pan_sensors" data-target="#col_sensors">
+											<span class="glyphicon glyphicon-tint"></span>&nbsp;Sensors<span class="pull-right glyphicon glyphicon-chevron-down"></span>
+										</h3>
+									</div>
+			            <div class="panel-collapse collapse in" id="col_sensors">
+										<div class="panel-body">
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Activated sensors</label>
+												<div class="col-sm-9">
+													<input class="checkbox-inline" id="sens_si7021" name="sens_si7021" type="checkbox" data-label-text="Internal (SI7021)">&nbsp;&nbsp;
+													<input class="checkbox-inline" id="sens_sht10" name="sens_sht10" type="checkbox" data-label-text="External (SHT10)">
+												</div>
+											</div>
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Sensors Reading Frequency</label>
+												<div class="col-sm-9">
+													<select id="sens_freq" name="sens_freq" class="form-control col-sm-2">
+														<option value="0">disabled</option>
+														<option value="1">every second</option>
+														<option value="5">every 5 seconds</option>
+														<option value="15">every 15 seconds</option>
+														<option value="30">every 30 seconds</option>
+														<option value="60">every minute</option>
+														<option value="300">every 5 minutes</option>
+														<option value="900">every 15 minutes</option>
+														<option value="1800">every 30 minutes</option>
+														<option value="3600">every hour</option>
+														<option value="21600">every 6 hours</option>
+														<option value="42300">every 12 hours</option>
+														<option value="86400">every day</option>
+													</select>
+												</div>
+											</div>
+
+											<div class="form-group">
+												<label class="col-sm-3 control-label">RGB Led controls</label>
+												<div class="col-sm-9" >
+													<div class="form-group row padtop7">
+														<div class="col-sm-3">
+															<p><strong>Temperature °C</strong></p>
+														</div>
+														<div class="col-sm-1">
+														<p class="text-right"><span class="badge pull-right">-20°C</span></p>
+														</div>
+														<div class="col-sm-7">
+															<input id="sens_temp_led" name="sens_temp_led" type="text"
+																		 data-slider-min="-20" 
+																		 data-slider-max="85" 
+																		 data-slider-step="1" 
+																		 data-slider-range="true" 
+																		 data-slider-tooltip="always"/>
+															</input>
+														</div>
+														<div class="col-sm-1">
+															<span class="badge">+85°C</span>
+														</div>
+													</div>
+													<br>
+													<div class="form-group row">
+														<div class="col-sm-3">
+															<p><strong>Relative Humidity (%RH)</strong></p>
+														</div>
+														<div class="col-sm-1">
+															<span class="badge pull-right">0%</span>
+														</div>
+														<div class="col-sm-7">
+															<input id="sens_hum_led" name="sens_hum_led" type="text"
+																		 data-slider-min="0" 
+																		 data-slider-max="100" 
+																		 data-slider-step="1" 
+																		 data-slider-range="true" 
+																		 data-slider-tooltip="always"/>
+														</div>
+														<div class="col-sm-1">
+															<span class="badge">100%</span>
+														</div>
+													</div>
+													<br>
+
+													<div class="form-group row">
+														<div class="col-sm-3">
+															<p><strong>Brightness</strong></p>
+														</div>
+														<div class="col-sm-1">
+															<span class="badge pull-right">0%</span>
+														</div>
+														<div class="col-sm-7">
+															<input id="cfg_led_bright" name="cfg_led_bright" class="col-sm-6" type="text"
+																			data-slider-min="0" 
+																			data-slider-max="100" 
+																			data-slider-step="1" 
+																			data-slider-ticks-snap-bounds="4" 
+																			data-slider-ticks="[0, 25, 50, 75, 100]" 
+																			data-slider-ticks-labels='["Off", "25%", "50%", "75%", "Full"]'>
+															</input>
+														</div>
+														<div class="col-sm-1">
+															<span class="badge">100%</span>
+														</div>
+													</div>
+													<br>
+
+													<div class="form-group row">
+														<div class="col-sm-3">
+															<p><strong>Heartbeat Frequency</strong></p>
+														</div>
+														<div class="col-sm-1">
+															<span class="badge pull-right">0%</span>
+														</div>
+														<div class="col-sm-7">
+															<input id="cfg_led_hb" name="cfg_led_hb" class="col-sm-6" type="text"
+																			data-slider-min="0" 
+																			data-slider-max="50" 
+  										 								data-slider-ticks="[0,5,10,20,50]" 
+																			data-slider-ticks-positions="[0, 25, 50, 75, 100]" 
+																			data-slider-ticks-labels='["Off", "0.5s", "1s", "2s", "5s"]'
+																			data-slider-tooltip="always"/>
+														</div>
+														<div class="col-sm-1">
+															<span class="badge">100%</span>
+														</div>
+													</div>													
+
+												</div>
+											</div>
+										</div>
+
+										<div class="panel-footer">
+											<div class="text-center">
+												<div class="btn-group">
+													<button type="submit" class="btn btn-default btn-warning">Save</button>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div> <!-- panel sensors -->
+
+							<!-- Panel Emoncms -->
+							<div class="panel-group" id="pan_emon">
+								<div class="panel panel-success">
+									<div class="panel-heading clearfix">
+										<h3 class="panel-title clickable" data-toggle="collapse" data-parent="#pan_emon" data-target="#col_emon">
+											<span class="glyphicon glyphicon-cloud-upload pull-left"></span>&nbsp;Cloud Data Recording<span class="pull-right glyphicon glyphicon-chevron-down"></span>
+										</h3>
+									</div>
+			            <div class="panel-collapse collapse out" id="col_emon">
+										<div class="panel-body">
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Send data</label>
+												<div class="col-sm-9">
+													<select id="emon_port" name="emon_freq" class="form-control col-sm-2">
+														<option value="0">disabled</option>
+														<option value="15">every 15 seconds</option>
+														<option value="30">every 30 seconds</option>
+														<option value="60">every minute</option>
+														<option value="300">every 5 minutes</option>
+														<option value="900">every 15 minutes</option>
+														<option value="1800">every 30 minutes</option>
+														<option value="3600">every hour</option>
+														<option value="21600">every 6 hours</option>
+														<option value="42300">every 12 hours</option>
+														<option value="86400">every day</option>
+													</select>
+												</div>
+											</div>
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Protocol</label>
+												<div class="col-sm-9">
+													<select id="emon_port" name="emon_port" class="form-control col-sm-2">
+														<option value="80">http (80)</option>
+														<option value="443">https (443)</option>
+													</select>
+												</div>
+											</div>
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Server name</label>
+												<div class="col-sm-9">
+													<input type="text" class="form-control" id="emon_host" name="emon_host" maxlength="32" placeholder="Server name">
+												</div>
+											</div>
+											<div class="form-group">
+												<label class="col-sm-3 control-label">URL</label>
+												<div class="col-sm-9">
+													<input type="text" class="form-control" id="emon_url" name="emon_url" maxlength="32" placeholder="Url">
+												</div>
+											</div>
+											<div class="form-group">
+												<label class="col-sm-3 control-label">API Key</label>
+												<div class="col-sm-9">
+													<input type="text" class="form-control" id="emon_apikey" name="emon_apikey" maxlength="32" placeholder="API Key">
+												</div>
+											</div>
+
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Node ID</label>
+												<div class="col-sm-9">
+													<input type="number" class="form-control" id="emon_node" name="emon_node" size="3" min="0" max="254" placeholder="Node ID">
+													<span class="help-block">0 mean no node ID used.</span>
+												</div>
+											</div>
+										</div> 
+										<div class="panel-footer">
+											<div class="text-center">
+												<div class="btn-group">
+													<button type="submit" class="btn btn-default btn-success">Save</button>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div> 
+							</div> <!-- panel emoncms -->
+
+							<!-- Panel Jeedom -->
+							<div class="panel-group" id="pan_jdom">
+								<div class="panel panel-warning">
+									<div class="panel-heading clearfix">
+										<h3 class="panel-title clickable" data-toggle="collapse" data-parent="#pan_jdom" data-target="#col_jdom">
+											<span class="glyphicon glyphicon-home"></span>&nbsp;Jeedom<span class="pull-right glyphicon glyphicon-chevron-down"></span>
+										</h3>
+									</div>
+			            <div class="panel-collapse collapse out" id="col_jdom">
+										<div class="panel-body">
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Protocole</label>
+												<div class="col-sm-9">
+													<select id="jdom_port" name="jdom_port" class="form-control col-sm-2">
+														<option value="80">http (80)</option>
+														<option value="8080">http (8080)</option>
+														<option value="443">https (443)</option>
+													</select>
+												</div>
+											</div>
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Serveur Jeedom</label>
+												<div class="col-sm-9">
+													<input type="text" class="form-control" id="jdom_host" name="jdom_host" maxlength="32" placeholder="Serveur">
+												</div>
+											</div>
+											<div class="form-group">
+												<label class="col-sm-3 control-label">URL</label>
+												<div class="col-sm-9">
+													<input type="text" class="form-control" id="jdom_url" name="jdom_url" maxlength="64" placeholder="Url">
+												</div>
+											</div>
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Clé API</label>
+												<div class="col-sm-9">
+													<input type="text" class="form-control" id="jdom_apikey" name="jdom_apikey" maxlength="32" placeholder="API Key">
+												</div>
+											</div>
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Mise à jour</label>
+												<div class="col-sm-9">
+													<select id="jdom_freq" name="jdom_freq" class="form-control col-sm-2">
+														<option value="0">désactivée</option>
+														<option value="15">toutes les 15 secondes</option>
+														<option value="30">toutes les 30 secondes</option>
+														<option value="60">toutes les minutes</option>
+														<option value="300">toutes les 5 minutes</option>
+														<option value="900">tous les 1/4 d"heure</option>
+														<option value="1800">toutes les 1/2 heure</option>
+														<option value="3600">toutes les heures</option>
+														<option value="21600">toutes les 6 heures</option>
+														<option value="42300">toutes les 12 heures</option>
+														<option value="86400">tous les jours</option>
+													</select>
+												</div>
+											</div>
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Identifiant compteur</label>
+												<div class="col-sm-9">
+													<input type="text" class="form-control" id="jdom_adco" name="jdom_adco" maxlength="12" placeholder="ADCO Compteur">
+													<span class="help-block">Uniquement si vous souhaitez forcer un autre identifiant que celui de votre compteur.</span>
+												</div>
+											</div>
+										</div>
+										<div class="panel-footer">
+											<div class="text-center">
+												<div class="btn-group">
+													<button type="submit" class="btn btn-default btn-warning">Enregistrer</button>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div> <!-- panel Jeedom -->
+
+							<!-- Panel domoticz -->
+							<div class="panel-group" id="pan_domz">
+								<div class="panel panel-warning">
+									<div class="panel-heading clearfix">
+										<h3 class="panel-title clickable" data-toggle="collapse" data-parent="#pan_domz" data-target="#col_domz">
+											<span class="glyphicon glyphicon-link"></span>&nbsp;DomoticZ<span class="pull-right glyphicon glyphicon-chevron-down"></span>
+										</h3>
+									</div>
+			            <div class="panel-collapse collapse out" id="col_domz">
+										<div class="panel-body">
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Protocole</label>
+												<div class="col-sm-9">
+													<select id="domz_port" name="domz_port" class="form-control col-sm-2">
+														<option value="80">http (80)</option>
+														<option value="8080">http (8080)</option>
+														<option value="443">https (443)</option>
+													</select>
+												</div>
+											</div>
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Serveur Domoticz</label>
+												<div class="col-sm-9">
+													<input type="text" class="form-control" id="domz_host" name="domz_host" maxlength="32" placeholder="Serveur">
+												</div>
+											</div>
+											<div class="form-group">
+												<label class="col-sm-3 control-label">URL</label>
+												<div class="col-sm-9">
+													<input type="text" class="form-control" id="domz_url" name="domz_url" maxlength="64" placeholder="Url">
+												</div>
+											</div>
+
+											<div class="form-group form-inline">
+												<label class="col-sm-3 control-label">User @ Password</label>
+												<div class="col-sm-9">
+													<input class="form-control" type="text" id="domz_user" name="domz_user" maxlength="16">&nbsp;
+													<label>&nbsp;@&nbsp;</label>
+													<input class="form-control" type="text" id="domz_pass" name="domz_pass" maxlength="16"></input>
+												</div>
+											</div>
+
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Mise à jour</label>
+												<div class="col-sm-9">
+													<select id="domz_freq" name="domz_freq" class="form-control col-sm-2">
+														<option value="0">désactivée</option>
+														<option value="15">toutes les 15 secondes</option>
+														<option value="30">toutes les 30 secondes</option>
+														<option value="60">toutes les minutes</option>
+														<option value="300">toutes les 5 minutes</option>
+														<option value="900">tous les 1/4 d"heure</option>
+														<option value="1800">toutes les 1/2 heure</option>
+														<option value="3600">toutes les heures</option>
+														<option value="21600">toutes les 6 heures</option>
+														<option value="42300">toutes les 12 heures</option>
+														<option value="86400">tous les jours</option>
+													</select>
+												</div>
+											</div>
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Id du device</label>
+												<div class="col-sm-9">
+													<input type="number" class="form-control" id="domz_idx" name="domz_idx" size="5" min="0" max="65535" placeholder="Dev ID">
+													<span class="help-block">Numéro du device dans DomoticZ.</span>
+												</div>
+											</div>
+										</div>
+										<div class="panel-footer">
+											<div class="text-center">
+												<div class="btn-group">
+													<button type="submit" class="btn btn-default btn-warning">Enregistrer</button>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div> <!-- panel domoticz -->
+
+							<!-- Panel counter -->
+							<div class="panel-group" id="pan_cnt">
+								<div class="panel panel-warning">
+									<div class="panel-heading clearfix">
+										<h3 class="panel-title clickable" data-toggle="collapse" data-parent="#pan_cnt" data-target="#col_cnt">
+											<span class="glyphicon glyphicon-sort"></span>&nbsp;Pulse Counter<span class="pull-right glyphicon glyphicon-chevron-down"></span>
+										</h3>
+									</div>
+			            <div class="panel-collapse collapse out" id="col_cnt">
+										<div class="panel-body">
+
+											<div class="form-group form-inline">
+												<label class="col-sm-3 control-label">Counter #1</label>
+												<div class="col-sm-9">
+
+													<label>IO Pin</label>&nbsp;
+													<select id="cnt_io_1" name="cnt_io_1" class="form-control">
+														<option value="255">Disabled</option>
+														<option value="2">GPIO2</option>
+														<option value="12">GPIO12</option>
+														<option value="13">GPIO13</option>
+														<option value="14">GPIO14</option>
+														<option value="15">GPIO15</option>
+													</select>&nbsp;&nbsp;
+													<label>Debounce Delay</label> <input class="form-control" type="text" id="cnt_dly_1" name="cnt_dly_1" size="5" min="0" max="65535" maxlength="5"></input> (in ms) &nbsp;&nbsp;
+													<label>Current Value</label> <input class="form-control" type="text" id="cnt_val_1" name="cnt_val_1" size="10" min="0" max="11165534"></input>
+													<button type="button" class="btn btn-default btn-warning" id="btn_cnt1">Set value</button>
+												</div>
+											</div>
+
+											<div class="form-group form-inline">
+												<label class="col-sm-3 control-label">Counter #2</label>
+												<div class="col-sm-9">
+
+													<label>IO Pin</label>&nbsp;
+													<select id="cnt_io_1" name="cnt_io_2" class="form-control">
+														<option value="255">Disabled</option>
+														<option value="2">GPIO2</option>
+														<option value="12">GPIO12</option>
+														<option value="13">GPIO13</option>
+														<option value="14">GPIO14</option>
+														<option value="15">GPIO15</option>
+													</select>&nbsp;&nbsp;
+													<label>Debounce Delay</label> <input class="form-control" type="text" id="cnt_dly_2" name="cnt_dly_2" size="5" min="0" max="65535" maxlength="5"></input> (in ms) &nbsp;&nbsp;
+													<label>Current Value</label> <input class="form-control" type="text" id="cnt_val_2" name="cnt_val_2" size="10" min="0" max="11165534"></input>
+													<button type="button" class="btn btn-default btn-warning" id="btn_cnt1">Set value</button>
+												</div>
+											</div>
+
+											
+										</div>
+										<div class="panel-footer">
+											<div class="text-center">
+												<div class="btn-group">
+													<button type="submit" class="btn btn-default btn-warning">Enregistrer</button>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div> <!-- panel counter -->
+
+							<!-- Advanced -->
+							<div class="panel-group" id="pan_advanced">
+								<div class="panel panel-danger">
+									<div class="panel-heading">
+										<h3 class="panel-title clickable" data-toggle="collapse" data-parent="#pan_advanced" data-target="#col_advanced">
+											<span class="glyphicon glyphicon-cog"></span>&nbsp;Advanced<span class="pull-right glyphicon glyphicon-chevron-down"></span>
+										</h3>
+									</div>
+				          <div class="panel-collapse collapse out" id="col_advanced">
+										<div class="panel-body">
+
+											<div class="form-group">
+												<label class="col-sm-3 control-label">Activated features</label>
+												<div class="col-sm-9">
+													<input class="checkbox-inline" id="cfg_debug" name="cfg_debug" type="checkbox" data-label-text="Serial Debug">
+													&nbsp;&nbsp;
+													<input class="checkbox-inline" id="cfg_rgb" name="cfg_rgb" type="checkbox" data-label-text="RGB Led">
+													&nbsp;&nbsp;
+													<input class="checkbox-inline" id="cfg_oled" name="cfg_oled" type="checkbox" data-label-text="Display">
+												</div>
+											</div>
+
+											<div class="form-group">
+												<label class="col-sm-3 control-label">OTA Password</label>
+												<div class="col-sm-9">
+													<input type="text" class="form-control" id="ota_auth" name="ota_auth" placeholder="OTA password">
+													<span class="help-block">Leave empty to disable OTA authentication for updates.</span>
+												</div>
+											</div>
+
+											<div class="form-group">
+												<label class="col-sm-3 control-label">OTA TCP Port</label>
+												<div class="col-sm-9">
+													<input type="number" class="form-control" id="ota_port" name="ota_port" size="5" min="1024" max="65534" placeholder="OTA TCP Port">
+												</div>
+											</div>
+
+											<div class="form-group form-inline">
+												<label class="col-sm-3 control-label">Led configuration</label>
+												<div class="col-sm-9">
+
+													<label>Type</label>&nbsp;
+													<select id="cfg_led_type" name="cfg_led_type" class="form-control">
+														<option value="0">None</option>
+														<option value="1">RGB</option>
+														<option value="2">GRB</option>
+														<option value="3">RGBW</option>
+														<option value="4">GRBW</option>
+													</select>&nbsp;&nbsp;
+													<label>IO Pin</label>&nbsp;
+													<select id="cfg_led_gpio" name="cfg_led_gpio" class="form-control">
+														<option value="255">Disabled</option>
+														<option value="0">GPIO0</option>
+														<option value="1">GPIO1</option>
+														<option value="2">GPIO2</option>
+														<option value="3">GPIO3</option>
+														<option value="4">GPIO4</option>
+														<option value="5">GPIO5</option>
+														<option value="12">GPIO12</option>
+														<option value="13">GPIO13</option>
+														<option value="14">GPIO14</option>
+														<option value="15">GPIO15</option>
+														<option value="16">GPIO16</option>
+													</select>&nbsp;&nbsp;
+													<label># of LED</label> <input class="form-control" type="number" id="cfg_led_num" name="cfg_led_num" size="3" min="1" max="128" maxlength="3"></input>
+												</div>
+											</div>
+
+										</div>
+
+										<div class="panel-footer">
+											<div class="text-center">
+												<div class="btn-group">
+													<button class="btn btn-danger" type="button" id="btn_reboot">Restart Smart Sensor</button>
+												</div>
+												<div class="btn-group">
+													<button class="btn btn-danger" type="button" data-toggle="modal" data-target="#confirm-raz">Factory Reset</button>
+												</div>
+												<div class="btn-group">
+													<button type="submit" class="btn btn-default btn-success">Save</button>
+												</div>
+											</div>
+										</div>
+									</div> 
+								</div> 
+							</div> <!-- advanced -->
+						</form> <!-- config form -->
+					</div> 
+		  	</div> <!-- tab config-->
+
+
+		  	<!-- tab terminal -->
+				<div class="tab-pane fade" id="tab_term">
+					<h4>Terminal Console</h4>
+						<div id="term" class="jumbotron container-fluid" style="padding:10px; height:85vh;">
+						</div>
+				</div> <!-- tab pane terminal -->
+
+	  	</div> <!-- tab content-->
+		<!--<button type="button" class="btn btn-danger" id="btn_test">test</button>-->
+	  </div> <!-- Container -->
+
+			<!-- Modal Confirm -->
+			<div class="modal fade" id="confirm-raz" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+				<div class="modal-dialog">
+					<div class="modal-content">
+						<div class="modal-header">
+							<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+							<h4 class="modal-title" id="myModalLabel">Please confirm factory Reset</h4>
+						</div>
+						<div class="modal-body">
+							<p>You are going to put your smart sensor settings to Factory, you'll need to setup back all option after this action and you'll be loosing this current Wifi access.</p>
+							<p>All SPIFFS file system will be empty and you'll need to set it back to have smart sensor working again.</p>
+							<p>Are you really sure that is what you want to do?</p>
+							<p class="debug-url"></p>
+						</div>
+
+						<div class="modal-footer">
+							<button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+							<button type="button" class="btn btn-danger" data-dismiss="modal" id="btn_reset">Yes please, erase all</button>
+						</div>
+					</div>
+				</div>
+			</div> <!-- Modal Confirm -->
+
+		<!-- Modal Wifi Scan -->
+		<div class="modal fade" id="tab_scan" tabindex="-1" role="dialog" aria-hidden="true">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+							<span aria-hidden="true">&times;</span>
+						</button>
+						<h4 class="modal-title">Available Wifi networks</h4>
+					</div>
+					<div class="modal-body">
+						<table 	id="tab_scan_data" 
+										class="table" 
+										data-toggle="table" 
+										data-cache="false" 
+										data-sort-name="rssi" 
+										data-sort-order="desc" 
+										data-show-refresh="true" 
+										data-show-loading="true">
+							<thead>
+								<tr>
+									<th class="col-sm-5" data-field="ssid" data-sortable="true" data-formatter="SSIDFormatter">SSID</th>
+									<th class="col-sm-4" data-field="signal" data-align="center" data-formatter="RSSIFormatter">Signal</th>
+									<th class="col-sm-2" data-field="rssi" data-sortable="true" data-sort-order="asc" data-align="center">RSSI</th>
+									<th class="col-sm-1" data-field="chan" data-align="center">Chan</th>
+								</tr>
+							</thead>
+						</table>
+					</div>
+					<div class="modal-footer">
+						<span class="pull-left">Click to row line to select the Wifi you want to connect to</span>
+						<button type="button" class="btn btn-error" data-dismiss="modal">Cancel</button>
+					</div>
+		   	</div> 
+		 	</div> 
+		</div> <!-- modal Wifi Scan -->
+
+		<!-- Modal Reconnect -->
+		<div class="modal fade" id="mdl_wait" data-keyboard="false">
+		  <div class="modal-dialog">
+		    <div class="modal-content">
+					<div class="modal-header ">
+						<h4 class="modal-title">Trying to reconnect to Module</h4>
+					</div>
+					<div class="modal-body">
+						<p class="text-center" id="txt_srv"></p>
+						<p class="text-center">
+							<span class="glyphicon glyphicon-refresh glyphicon-refresh-animate" style="font-size: 3.5em;">
+							</span>
+						</p>
+						<p class="text-center" id="txt_elapsed"></p>
+					</div>
+				</div>
+			</div>
+		</div> <!-- Modal Reboot -->
+
+	  <!-- Scripts devant être chargés en fin de page -->
+	  <!-- Librairies -->
+		<script src="js/nrjmeter.js"></script>
+	  <!-- Main script de cette page -->
+		<script src="js/main.js"></script>
+	</body>
+</html>
+

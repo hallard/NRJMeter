@@ -1,0 +1,162 @@
+// **********************************************************************************
+// ESP8266 NRJMeter WEB Server global Include file
+// **********************************************************************************
+// Creative Commons Attrib Share-Alike License
+// You are free to use/extend this library but please abide with the CC-BY-SA license:
+// Attribution-NonCommercial-ShareAlike 4.0 International License
+// http://creativecommons.org/licenses/by-nc-sa/4.0/
+//
+// For any explanation about teleinfo ou use , see my blog
+// http://hallard.me/category/tinfo
+//
+// This program works with the Wifinfo board
+// see schematic here https://github.com/hallard/teleinfo/tree/master/Wifinfo
+//
+// Written by Charles-Henri Hallard (http://hallard.me)
+//
+// History : V1.00 2015-06-14 - First release
+//
+// All text above must be included in any redistribution.
+//
+// **********************************************************************************
+#ifndef NRJMETER_H
+#define NRJMETER_H
+
+// Include Arduino header
+#include <Arduino.h>
+#include <ESP8266WiFi.h>
+//#include <ESP8266WebServer.h>
+#include <DNSServer.h>
+#include <ESP8266HTTPClient.h>
+//#include <WebSocketsServer.h>
+#include <ESPAsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <ArduinoJson.h>
+#include <AsyncJson.h>
+#include <Hash.h>
+#include <ESP8266mDNS.h>
+#include <WifiUdp.h>
+#include <EEPROM.h>
+#include <Wire.h>
+//#include <NeoPixelBus.h>
+#include <LibTeleinfo.h>
+#include <FS.h>
+//#include <GDBStub.h>
+
+extern "C" {
+#include "user_interface.h"
+}
+
+#include "debug.h"
+#include "flash_str.h"
+#include "webserver.h"
+#include "webclient.h"
+#include "config.h"
+#include "sensors.h"
+#include "NeoPixelWrapper.h"
+
+
+#define NRJMETER_VERSION_MAJOR 1
+#define NRJMETER_VERSION_MINOR 0
+
+// Maximum time when we fire a reset with no refresh (in sec)
+#define WDT_RESET_TIME 30
+
+// Maximum time when wifi is allowed to setup config (in sec)
+#define MAX_WIFI_SEC	300
+
+// Maximum number of simultaned clients connected (WebSocket)
+#define MAX_WS_CLIENT	5
+
+#define BLINK_LED_MS   100 // ms blink
+#define RGB_LED_PIN    0
+//#define RGB_LED_COUNT  1
+//#define RGB_LED_COUNT  17
+
+
+#define RGB_ANIM_FADEINOUT	1
+#define RGB_ANIM_CYCLON			2
+
+// value for HSL color
+// see http://www.workwithcolor.com/blue-color-hue-range-01.htm
+#define COLOR_RED             0
+#define COLOR_ORANGE         30
+#define COLOR_ORANGE_YELLOW  45
+#define COLOR_YELLOW         60
+#define COLOR_YELLOW_GREEN   90
+#define COLOR_GREEN         120
+#define COLOR_GREEN_CYAN    165
+#define COLOR_CYAN          180
+#define COLOR_CYAN_BLUE     210
+#define COLOR_BLUE          240
+#define COLOR_BLUE_MAGENTA  275
+#define COLOR_MAGENTA	      300
+#define COLOR_PINK		      350
+
+
+
+#define CLIENT_NONE			0
+#define CLIENT_SENSORS	1
+#define CLIENT_SYSTEM		2
+#define CLIENT_CONFIG		3
+#define CLIENT_SPIFFS		4
+#define CLIENT_LOG			5
+
+// Light off the RGB LED
+#ifndef RGB_LED_PIN
+#define LedRGBOFF()  {}
+#define LedRGBON(x)  {}
+#else
+//#define LedRGBOFF() { rgb_led.SetPixelColor(0,0,0,0); rgb_led.Show(); }
+//void LedRGBON(uint8_t hue );
+//void LedRGBON (uint8_t r, uint8_t g, uint8_t b);
+#endif
+
+
+// output  functions
+#define Debug(x)     	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.print(x);}
+#define Debug2(x,y)  	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.print(x,y);}
+#define Debugln(x)		{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.println(x);}
+#define Debugln2(x,y)	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.println(x,y);}
+#define DebugF(x)   	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.print(F(x));}
+#define DebuglnF(x) 	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.println(F(x));}
+#define Debugf(...) 	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.printf(__VA_ARGS__);}
+
+
+// Exported variables/object instancied in main sketch
+// ===================================================
+//extern ESP8266WebServer server;
+extern DNSServer dnsServer;
+//extern WebSocketsServer webSocket;
+extern AsyncWebServer server;
+extern AsyncWebSocket ws; 
+extern WiFiUDP OTA;
+#ifdef RGB_LED_PIN
+  extern long rgb_led_timer ;
+#endif
+
+// Web Socket client state
+typedef struct {
+  uint32_t  id;
+  uint16_t  refresh;
+  uint16_t  tick;
+  uint8_t   state;
+} _ws_client; 
+
+extern unsigned long seconds;
+extern unsigned long wifi_connect_time;
+extern uint8_t heartbeat;
+extern boolean task_emoncms ;
+extern boolean task_sensors ;
+
+// Exported function located in main sketch
+// ===================================================
+void handle_net(void);
+#ifdef RGB_LED_PIN
+void LedRGBSetup(void);
+#else
+#define LedRGBSetup(){}
+#endif
+
+#endif
+
