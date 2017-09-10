@@ -23,6 +23,44 @@
 // Include Arduino header
 #include "webserver.h"
 
+// Web server
+AsyncWebServer web_server(80);
+AsyncWebSocket ws("/ws"); // access at ws://[esp ip]/ws
+
+// State Machine for WebSocket Client;
+_ws_client ws_client[MAX_WS_CLIENT]; 
+
+
+const char* http_username = "admin";
+const char* http_password = "admin";
+
+
+
+class CaptiveRequestHandler : public AsyncWebHandler {
+public:
+  CaptiveRequestHandler() {
+  }
+
+  bool canHandle(AsyncWebServerRequest *request) {
+    // redirect if not in wifi client mode (through filter)
+    // and request for different host (due to DNS * response)
+    if (request->host() != WiFi.softAPIP().toString())
+      return true;
+    else
+      return false;
+  }
+
+  void handleRequest(AsyncWebServerRequest *request) {
+    Debugf("Captive request to %s\n", request->url().c_str());
+    String location = "http://" + WiFi.softAPIP().toString();
+    if (request->host() == WiFi.hostname() + ".local")
+      location += request->url();
+    request->redirect(location);
+  }
+};
+
+
+
 /* ======================================================================
 Function: formatSize 
 Purpose : format a asize to human readable format
@@ -79,14 +117,25 @@ void handleFormConfig(AsyncWebServerRequest *request)
   String response="";
   int ret ;
 
+  DebuglnF("Serving handleFormConfig...");
+  Debugflush(); 
+
   // We validated config ?
-  if ( request->hasArg(CFG_SAVE) ) {
+  // Cant't use PSTR CFG_SAVE here, crash dump hasArg don't have _P
+  if ( request->hasArg( "save") ) {
     uint8_t params = request->params();
-    int itemp, l;
+    int i, l;
     char buff[CFG_SERIAL_BUFFER_SIZE+2]; // Assume Max Len buffer for Arg + = + value 
-    DebuglnF("===== Posted configuration"); 
+    Debugf("===== Posted configuration with %d parameters\r\n", params);
     Debugflush(); 
 
+
+    //resetConfig();
+    // enable default configuration, zero all 
+    memset(&config, 0, sizeof(_Config));
+
+    
+/*
     // Since Checkbox unchecked are not send (we receive only the one checked as cfg_box=on)
     // We clear all related options of them, if checked we will be receive it
     config.config &= ~(CFG_LCD|CFG_DEBUG|CFG_RGB_LED|CFG_AP|CFG_STATIC|CFG_WIFI);
@@ -112,20 +161,24 @@ void handleFormConfig(AsyncWebServerRequest *request)
 
     config.sensors.en_si7021 = false;
     config.sensors.en_sht10 = false;
+    config.sensors.en_mcp3421 = false;
     config.ip = 0;
     config.mask = 0;
     config.gw = 0;
     config.dns = 0;
-
+*/
 
     // Navigate for all args, and simulate as it was typed from command line
-    for ( uint8_t i = 0; i < params; i++ ) {
+    for ( i = 0; i < params; i++ ) {
       AsyncWebParameter* param = request->getParam(i);
       // calc total size + ' ' + '\0'
       l = 2 +  param->name().length() + param->value().length() ;
+      //Debugf("[%02d][%02d] %s %s\r\n", i, l, param->name().c_str(), param->value().c_str());
+      //Debugflush();
+
       // fit in buffer and not save command
       if (l<CFG_SERIAL_BUFFER_SIZE && param->name()!="save") {
-        snprintf(buff, l, "%s %s", param->name().c_str(), param->value().c_str());
+        sprintf_P(buff, PSTR("%s %s"), param->name().c_str(), param->value().c_str());
         Debugf("[%02d] %s\r\n", i, buff);
         Debugflush();
         execCmd(buff);
@@ -164,6 +217,9 @@ void handleFormCounter(AsyncWebServerRequest *request)
 {
   String response="";
   int ret, l ;
+
+  DebugF("Serving handleFormCounter...");
+  Debugflush(); 
 
   // We validated config ?
   if ( request->hasArg(CFG_COUNT1_VALUE) || request->hasArg(CFG_COUNT2_VALUE)) {
@@ -314,6 +370,20 @@ String sysJSONTable(AsyncWebServerRequest * request)
     item[FPSTR(FP_NA)] = "Wifi Autoconnect";
     item[FPSTR(FP_VA)] = wifi_station_get_auto_connect(); }
 
+
+
+  // Sensors Stuff
+  // =============
+  char sensors[32]="";
+  { JsonObject& item = arr.createNestedObject();
+    item[FPSTR(FP_NA)] = "I2C devices";
+    if (config.config&CFG_SI7021) strcat(sensors, "SI7021 ");
+    if (config.config&CFG_SHT10) strcat(sensors, "SHT1x ");
+    if (config.config&CFG_MCP3421) strcat(sensors, "MCP3421 ");
+    if (config.config&CFG_MCP4725) strcat(sensors, "MCP4725 ");
+    if (config.config&CFG_HASOLED) strcat(sensors, "OLED ");
+    item[FPSTR(FP_VA)] = sensors ; }
+
   // Flash Stuff
   // ===========
   String FlashChipRealSize = formatSize(ESP.getFlashChipRealSize());
@@ -405,13 +475,18 @@ String sensorsJSONTable(AsyncWebServerRequest * request)
   JsonObject& o_si7021 = a_si7021.createNestedObject();
   o_si7021[FPSTR(FP_TEMPERATURE)] = si7021_temperature/100.0;
   o_si7021[FPSTR(FP_HUMIDITY)]    = si7021_humidity/100.0 ;   
-  o_si7021[FPSTR(FP_SEEN)]        = si7021_last_seen ;  
+  o_si7021[FPSTR(FP_SEEN)]        = (int)((config.config&CFG_SI7021)?si7021_last_seen:-1);  
 
   JsonArray& a_sht10 = root.createNestedArray("sht10");
   JsonObject& o_sht10 = a_sht10.createNestedObject();
   o_sht10[FPSTR(FP_TEMPERATURE)] = sht1x_temperature/100.0;
   o_sht10[FPSTR(FP_HUMIDITY)]    = sht1x_humidity/100.0 ;   
-  o_sht10[FPSTR(FP_SEEN)]        = sht1x_last_seen ;  
+  o_sht10[FPSTR(FP_SEEN)]        = (int)((config.config&CFG_SHT10)?sht1x_last_seen:-1);  
+
+  JsonArray& a_mcp3421 = root.createNestedArray("mcp3421");
+  JsonObject& o_mcp3421 = a_mcp3421.createNestedObject();
+  o_mcp3421[FPSTR(FP_POWER)] = mcp3421_power;
+  o_mcp3421[FPSTR(FP_SEEN)]  = (int)((config.config&CFG_MCP3421)?mcp3421_last_seen:-1);  
 
   // Web request send response to client
   size_t jsonlen ;
@@ -448,7 +523,8 @@ void confJSONTable(AsyncWebServerRequest * request)
   AsyncJsonResponse * response = new AsyncJsonResponse();
   JsonObject& root = response->getRoot(); 
 
-  DebugF("Serving /config page...");
+  DebuglnF("Serving /config page...");
+  // Debugf("Stage 1 : JSONBufferSize:%d  FreeRam:%d\r\n", response->getSize(), ESP.getFreeHeap());
 
   root[FPSTR(CFG_SSID)]    = config.ssid;
   root[FPSTR(CFG_PSK)]     = config.psk;
@@ -460,59 +536,65 @@ void confJSONTable(AsyncWebServerRequest * request)
   ip_addr=config.mask; root[FPSTR(CFG_MASK)]    = ip_addr.toString();
   ip_addr=config.gw;   root[FPSTR(CFG_GATEWAY)] = ip_addr.toString();
   ip_addr=config.dns;  root[FPSTR(CFG_DNS)]     = ip_addr.toString();
-
   root[FPSTR(CFG_EMON_HOST)] = config.emoncms.host;
-  root[FPSTR(CFG_EMON_PORT)] = config.emoncms.port;
+  root[FPSTR(CFG_EMON_PORT)] = (unsigned int) config.emoncms.port;
   root[FPSTR(CFG_EMON_URL)]  = config.emoncms.url;
   root[FPSTR(CFG_EMON_KEY)]  = config.emoncms.apikey;
-  root[FPSTR(CFG_EMON_NODE)] = config.emoncms.node;
-  root[FPSTR(CFG_EMON_FREQ)] = config.emoncms.freq;
+  root[FPSTR(CFG_EMON_NODE)] = (unsigned int) config.emoncms.node;
+  root[FPSTR(CFG_EMON_FREQ)] = (unsigned int) config.emoncms.freq;
 
   root[FPSTR(CFG_JDOM_HOST)] = config.jeedom.host;
-  root[FPSTR(CFG_JDOM_PORT)] = config.jeedom.port;
+  root[FPSTR(CFG_JDOM_PORT)] = (unsigned int) config.jeedom.port;
   root[FPSTR(CFG_JDOM_URL)]  = config.jeedom.url;
   root[FPSTR(CFG_JDOM_KEY)]  = config.jeedom.apikey;
   root[FPSTR(CFG_JDOM_ADCO)] = config.jeedom.adco;
-  root[FPSTR(CFG_JDOM_FREQ)] = config.jeedom.freq;
+  root[FPSTR(CFG_JDOM_FREQ)] = (unsigned int) config.jeedom.freq;
 
   root[FPSTR(CFG_DOMZ_HOST)] = config.domz.host;
-  root[FPSTR(CFG_DOMZ_PORT)] = config.domz.port;
+  root[FPSTR(CFG_DOMZ_PORT)] = (unsigned int) config.domz.port;
   root[FPSTR(CFG_DOMZ_URL)]  = config.domz.url;
   root[FPSTR(CFG_DOMZ_USER)] = config.domz.user;
   root[FPSTR(CFG_DOMZ_PASS)] = config.domz.pass;
-  root[FPSTR(CFG_DOMZ_INDEX)]= config.domz.index;
-  root[FPSTR(CFG_DOMZ_FREQ)] = config.domz.freq;
+  root[FPSTR(CFG_DOMZ_INDEX)]= (unsigned int) config.domz.index;
+  root[FPSTR(CFG_DOMZ_FREQ)] = (unsigned int) config.domz.freq;
 
-  root[FPSTR(CFG_COUNT1_GPIO)]  = config.counter.gpio1;
-  root[FPSTR(CFG_COUNT1_DELAY)] = config.counter.delay1;
-  root[FPSTR(CFG_COUNT1_VALUE)] = config.counter.value1;
-  root[FPSTR(CFG_COUNT2_GPIO)]  = config.counter.gpio2;
-  root[FPSTR(CFG_COUNT2_DELAY)] = config.counter.delay2;
-  root[FPSTR(CFG_COUNT2_VALUE)] = config.counter.value2;
+  root[FPSTR(CFG_COUNT1_GPIO)]  = (unsigned int) config.counter.gpio1;
+  root[FPSTR(CFG_COUNT1_DELAY)] = (unsigned int) config.counter.delay1;
+  root[FPSTR(CFG_COUNT1_VALUE)] = (unsigned long) config.counter.value1;
+  root[FPSTR(CFG_COUNT2_GPIO)]  = (unsigned int) config.counter.gpio2;
+  root[FPSTR(CFG_COUNT2_DELAY)] = (unsigned int) config.counter.delay2;
+  root[FPSTR(CFG_COUNT2_VALUE)] = (unsigned long) config.counter.value2;
 
   root[FPSTR(CFG_OTA_AUTH)] = config.ota_auth;
-  root[FPSTR(CFG_OTA_PORT)] = config.ota_port;
-  root[FPSTR(CFG_SENS_SI7021)]= config.sensors.en_si7021;
-  root[FPSTR(CFG_SENS_SHT10)] = config.sensors.en_sht10;
+  root[FPSTR(CFG_OTA_PORT)] = (unsigned int) config.ota_port;
+  root[FPSTR(CFG_SENS_SI7021)]= (unsigned int) config.sensors.en_si7021;
+  root[FPSTR(CFG_SENS_SHT10)] = (unsigned int) config.sensors.en_sht10;
+  root[FPSTR(CFG_SENS_MCP3421)] = (unsigned int) config.sensors.en_mcp3421;
 
   root[FPSTR(CFG_CFG_RGBLED)] = (config.config&CFG_RGB_LED)?1:0;
-  root[FPSTR(CFG_CFG_DEBUG)]  = (config.config&CFG_DEBUG)?1:0;;
-  root[FPSTR(CFG_CFG_OLED)]   = (config.config&CFG_LCD)?1:0;;
-  root[FPSTR(CFG_CFG_AP)]     = (config.config&CFG_AP)?1:0;;
-  root[FPSTR(CFG_CFG_WIFI)]   = (config.config&CFG_WIFI)?1:0;;
-  root[FPSTR(CFG_CFG_STATIC)] = (config.config&CFG_STATIC)?1:0;;
+  root[FPSTR(CFG_CFG_DEBUG)]  = (config.config&CFG_DEBUG)?1:0;
+  root[FPSTR(CFG_CFG_OLED)]   = (config.config&CFG_LCD)?1:0;
+  root[FPSTR(CFG_CFG_AP)]     = (config.config&CFG_AP)?1:0;
+  root[FPSTR(CFG_CFG_WIFI)]   = (config.config&CFG_WIFI)?1:0;
+  root[FPSTR(CFG_CFG_STATIC)] = (config.config&CFG_STATIC)?1:0;
+  root[FPSTR(CFG_CFG_SI7021)] = (config.config&CFG_SI7021)?1:0;
+  root[FPSTR(CFG_CFG_SHT10)]  = (config.config&CFG_SHT10)?1:0;
+  root[FPSTR(CFG_CFG_MCP3421)]= (config.config&CFG_MCP3421)?1:0;
+  root[FPSTR(CFG_CFG_HASOLED)]= (config.config&CFG_HASOLED)?1:0;
 
-  root[FPSTR(CFG_LED_BRIGHTNESS)] = config.led_bright;
-  root[FPSTR(CFG_LED_HEARTBEAT)]  = config.led_hb;
-  root[FPSTR(CFG_LED_NUM)]        = config.led_num;
-  root[FPSTR(CFG_LED_GPIO)]       = config.led_gpio;
-  root[FPSTR(CFG_LED_TYPE)]       = config.led_type;
+  root[FPSTR(CFG_LED_BRIGHTNESS)] = (unsigned int) config.led_bright;
+  root[FPSTR(CFG_LED_HEARTBEAT)]  = (unsigned int) config.led_hb;
+  root[FPSTR(CFG_LED_NUM)]        = (unsigned int) config.led_num;
+  root[FPSTR(CFG_LED_GPIO)]       = (unsigned int) config.led_gpio;
+  root[FPSTR(CFG_LED_TYPE)]       = (unsigned int) config.led_type;
 
-  root[FPSTR(CFG_SENS_FREQ)] = config.sensors.freq;
+  root[FPSTR(CFG_SENS_FREQ)] = (unsigned int) config.sensors.freq;
   str = config.sensors.hum_min_warn; str += "," ; str += config.sensors.hum_max_warn;
   root[FPSTR(CFG_SENS_HUM_LED)]   = str;
   str = config.sensors.temp_min_warn; str += "," ; str += config.sensors.temp_max_warn;
   root[FPSTR(CFG_SENS_TEMP_LED)]  = str;
+  str = config.sensors.pwr_min_warn; str += "," ; str += config.sensors.pwr_max_warn;
+  root[FPSTR(CFG_SENS_PWR_LED)]  = str;
 
   size_t jsonlen ;
   jsonlen = response->setLength();
@@ -529,7 +611,7 @@ Comments: -
 ====================================================================== */
 void spiffsJSONTable(AsyncWebServerRequest * request)
 {
-  AsyncJsonResponse * response = new AsyncJsonResponse(false);
+  AsyncJsonResponse * response = new AsyncJsonResponse();
   JsonObject& root = response->getRoot(); 
 
   DebugF("Serving /spiffs page...");
@@ -563,46 +645,60 @@ Function: wifiScanJSON
 Purpose : scan Wifi Access Point and return JSON code
 Input   : -
 Output  : - 
-Comments: -
+Comments: 
 ====================================================================== */
 void wifiScanJSON(AsyncWebServerRequest * request)
 {
-  String buff;
-
-  AsyncJsonResponse * response = new AsyncJsonResponse(true);
-  JsonArray& arr = response->getRoot(); 
+  AsyncJsonResponse * response = new AsyncJsonResponse();
+  JsonObject& root = response->getRoot(); 
 
   // Just to debug where we are
   Debug(F("Serving /wifiscan page..."));
 
-  int n = WiFi.scanNetworks();
+  // Return WIFI_SCAN_RUNNING -1 or WIFI_SCAN_FAILED -2
+  int n = WiFi.scanComplete();
 
-  // Just to debug where we are
-  Debugf("found %d networks!",n);
+  root[FPSTR(FP_STATUS)] = n;
 
-  for (int i = 0; i < n; ++i) {
+  if(n == WIFI_SCAN_FAILED) {
+    DebugF("No results, starting scan...");
+    WiFi.scanNetworks(true);
+  } else if (n) {
+    char buff[] = "????";
+    int qual;
 
-    switch(WiFi.encryptionType(i)) {
-      case ENC_TYPE_NONE: buff = "Open";  break;
-      case ENC_TYPE_WEP:  buff = "WEP";   break;
-      case ENC_TYPE_TKIP: buff = "WPA";   break;
-      case ENC_TYPE_CCMP: buff = "WPA2";  break;
-      case ENC_TYPE_AUTO: buff = "Auto";  break;
-      default:            buff = "????";  break;
+    JsonArray& a_net = root.createNestedArray("networks");
+    // Just to debug where we are
+    Debugf("Scan done:%d networks!\r\n",n);
+
+    for (int i = 0; i < n; ++i) {
+      switch(WiFi.encryptionType(i)) {
+        case ENC_TYPE_NONE: strcpy_P(buff, PSTR("Open"));  break;
+        case ENC_TYPE_WEP:  strcpy_P(buff, PSTR("WEP")) ;  break;
+        case ENC_TYPE_TKIP: strcpy_P(buff, PSTR("WPA")) ;  break;
+        case ENC_TYPE_CCMP: strcpy_P(buff, PSTR("WPA2"));  break;
+        case ENC_TYPE_AUTO: strcpy_P(buff, PSTR("Auto"));  break;
+      }
+
+      Debugf("[%d] '%s' Encryption=%s Channel=%d\r\n", i, WiFi.SSID(i).c_str(), buff, WiFi.channel(i));
+
+      JsonObject& item = a_net.createNestedObject();
+      item[FPSTR(FP_SSID)]       = WiFi.SSID(i);
+      item[FPSTR(FP_RSSI)]       = WiFi.RSSI(i); 
+      item[FPSTR(FP_ENCRYPTION)] = buff; 
+      item[FPSTR(FP_CHANNEL)]    = WiFi.channel(i); 
     }
 
-    Debugf("[%d] '%s' Encryption=%s Channel=%d\r\n", i, WiFi.SSID(i).c_str(), buff.c_str(), WiFi.channel(i));
+    size_t jsonlen ;
+    jsonlen = response->setLength();
+    request->send(response); 
+    //Debugf("%d bytes\r\n", jsonlen);
 
-    JsonObject& item = arr.createNestedObject();
-    item[FPSTR(FP_SSID)]       = WiFi.SSID(i);
-    item[FPSTR(FP_RSSI)]       = WiFi.RSSI(i); 
-    item[FPSTR(FP_ENCRYPTION)] = buff; 
-    item[FPSTR(FP_CHANNEL)]    = WiFi.channel(i); 
+    WiFi.scanDelete();
+    if(WiFi.scanComplete() == WIFI_SCAN_FAILED) {
+      WiFi.scanNetworks(true);
+    }
   }
-
-  Debugf("%d bytes\r\n", arr.measureLength());
-  response->setLength();
-  request->send(response); 
 }
 
 /* ======================================================================
@@ -639,7 +735,6 @@ void handleReset(AsyncWebServerRequest * request)
   resetBoard();
 }
 
-
 /* ======================================================================
 Function: handleNotFound 
 Purpose : default WEB routing when URI is not found
@@ -649,50 +744,291 @@ Comments: -
 ====================================================================== */
 void handleNotFound(AsyncWebServerRequest * request) 
 {
-  AsyncResponseStream *response = request->beginResponseStream("text/html");
-  //response->addHeader("Server","ESP Async Web Server");
-  response->printf("<!DOCTYPE html><html><head><title>Webpage at %s</title></head><body>", request->url().c_str());
-  response->print("<h2>Sorry ");
-  response->print(request->client()->remoteIP());
-  response->print("We're unable to process this page</h2>");
 
-  response->print("<h3>Information</h3>");
-  response->print("<ul>");
-  response->printf("<li>Version: HTTP/1.%u</li>", request->version());
-  response->printf("<li>Method: %s</li>", request->methodToString());
-  response->printf("<li>URL: %s</li>", request->url().c_str());
-  response->printf("<li>Host: %s</li>", request->host().c_str());
-  response->printf("<li>ContentType: %s</li>", request->contentType().c_str());
-  response->printf("<li>ContentLength: %u</li>", request->contentLength());
-  response->printf("<li>Multipart: %s</li>", request->multipart()?"true":"false");
-  response->print("</ul>");
+  // Handle captive portal
+  if ( request->url().startsWith("/hotspot-detect.html") 
+       || request->url().startsWith("/fwlink") 
+       || request->url().startsWith("/generate_204")) {
 
-  response->print("<h3>Headers</h3>");
-  response->print("<ul>");
-  int headers = request->headers();
-  for (int i=0;i<headers;i++) {
-    AsyncWebHeader* h = request->getHeader(i);
-    response->printf("<li>%s: %s</li>", h->name().c_str(), h->value().c_str());
-  }
-  response->print("</ul>");
+    // Redirect to main mage
+    request->redirect("/");
 
-  response->print("<h3>Parameters</h3>");
-  response->print("<ul>");
-  int params = request->params();
-  for(int i=0;i<params;i++){
-    AsyncWebParameter* p = request->getParam(i);
-    if( p->isFile() ) {
-      response->printf("<li>FILE[%s]: %s, size: %u</li>", p->name().c_str(), p->value().c_str(), p->size());
-    } else if ( p->isPost() ) {
-      response->printf("<li>POST[%s]: %s</li>", p->name().c_str(), p->value().c_str());
-    } else {
-      response->printf("<li>GET[%s]: %s</li>", p->name().c_str(), p->value().c_str());
+  } else {
+    AsyncResponseStream *response = request->beginResponseStream("text/html");
+    //response->addHeader("Server","ESP Async Web Server");
+    response->printf("<!DOCTYPE html><html><head><title>Webpage at %s</title></head><body>", request->url().c_str());
+    response->print("<h2>Sorry ");
+    response->print(request->client()->remoteIP());
+    response->print("We're unable to process this page</h2>");
+
+    response->print("<h3>Information</h3>");
+    response->print("<ul>");
+    response->printf("<li>Version: HTTP/1.%u</li>", request->version());
+    response->printf("<li>Method: %s</li>", request->methodToString());
+    response->printf("<li>URL: %s</li>", request->url().c_str());
+    response->printf("<li>Host: %s</li>", request->host().c_str());
+    response->printf("<li>ContentType: %s</li>", request->contentType().c_str());
+    response->printf("<li>ContentLength: %u</li>", request->contentLength());
+    response->printf("<li>Multipart: %s</li>", request->multipart()?"true":"false");
+    response->print("</ul>");
+
+    response->print("<h3>Headers</h3>");
+    response->print("<ul>");
+    int headers = request->headers();
+    for (int i=0;i<headers;i++) {
+      AsyncWebHeader* h = request->getHeader(i);
+      response->printf("<li>%s: %s</li>", h->name().c_str(), h->value().c_str());
     }
-  }
-  response->print("</ul>");
+    response->print("</ul>");
 
-  response->print("</body></html>");
-  //send the response last
-  request->send(response);
+    response->print("<h3>Parameters</h3>");
+    response->print("<ul>");
+    int params = request->params();
+    for(int i=0;i<params;i++){
+      AsyncWebParameter* p = request->getParam(i);
+      if( p->isFile() ) {
+        response->printf("<li>FILE[%s]: %s, size: %u</li>", p->name().c_str(), p->value().c_str(), p->size());
+      } else if ( p->isPost() ) {
+        response->printf("<li>POST[%s]: %s</li>", p->name().c_str(), p->value().c_str());
+      } else {
+        response->printf("<li>GET[%s]: %s</li>", p->name().c_str(), p->value().c_str());
+      }
+    }
+    response->print("</ul>");
+
+    response->print("</body></html>");
+    //send the response last
+    request->send(response);
+  }
+}
+
+/* ======================================================================
+Function: webSocketEvent
+Purpose : Manage routing of websocket events
+Input   : -
+Output  : - 
+Comments: -
+====================================================================== */
+void webSocketEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len)
+{
+  //Handle WebSocket event
+  switch(type) {
+    
+    case WS_EVT_DISCONNECT:
+      //client disconnected
+      Debugf("ws[%s][%u] Disconnect ", server->url(), client->id());
+
+      for (uint8_t i=0; i<MAX_WS_CLIENT ; i++) {
+        if (ws_client[i].id == client->id() ) {
+          ws_client[i].id = 0;
+          ws_client[i].state = CLIENT_NONE;
+          ws_client[i].refresh = 0;
+          ws_client[i].tick = 0;
+          Debugf("freed[%d]\n", i);
+          i=MAX_WS_CLIENT; // Exit for loop
+        }
+      }
+    break;
+
+    case WS_EVT_CONNECT:
+      uint8_t i;
+      //client connected
+      Debugf("ws[%s][%u] connect ", server->url(), client->id() );
+      // Search a free location to store client information
+      for (i=0; i<MAX_WS_CLIENT ; i++) {
+        if (ws_client[i].id == 0 ) {
+          ws_client[i].id = client->id();
+          ws_client[i].state = CLIENT_NONE;
+          ws_client[i].refresh = 0;
+          ws_client[i].tick = 0;
+          Debugf("added[%d]\n", i);
+
+          String response = "{message:\"config\", \"data\":[{\"ledpanel\":";
+          response += config.led_panel;
+          response += "}]}";
+          Debugf("ws[%u][%u] sending %s\n", ws_client[i].id, i, response.c_str());    
+
+          // send message to this connected client
+          ws.text(ws_client[i].id, response);
+          break; // Exit for loop
+        }
+      }
+      if (i>MAX_WS_CLIENT) {
+        DebuglnF("not added, table is full");
+      }
+    break;
+
+    case WS_EVT_ERROR: 
+      //error was received from the other end
+      Debugf("ws[%s][%u] error(%u): %s\n", server->url(), client->id(), *((uint16_t*)arg), (char*)data);    
+    break;
+
+    case WS_EVT_PONG: 
+      //pong message was received (in response to a ping request maybe)
+      Debugf("ws[%s][%u] pong[%u]: %s\n", server->url(), client->id(), len, (len)?(char*)data:"");  
+    break;
+
+    case WS_EVT_DATA: {
+      //data packet
+      AwsFrameInfo * info = (AwsFrameInfo*) arg;
+
+      if (info->final && info->index == 0 && info->len == len) {
+        //the whole message is in a single frame and we got all of it's data
+        Debugf("ws[%s][#%u] %s-msg[%lu]: ", server->url(), client->id(), (info->opcode == WS_TEXT)?"text":"binary", (uint32_t) info->len);
+
+        // Search if it's a known client
+        for (uint8_t index=0; index<MAX_WS_CLIENT ; index++) {
+          if (ws_client[index].id == client->id() ) {
+            String msg = "";
+            char buff[3];
+            int val;
+
+            // Grab all data
+            for(size_t i=0; i < info->len; i++) {
+              if (info->opcode == WS_TEXT ) {
+                msg += (char) data[i];
+              } else {
+                sprintf(buff, "%02x ", (uint8_t) data[i]);
+                msg += buff ;
+              }
+            }
+            Debugf("known[%d] '%s'\n", index, msg.c_str());
+            Debugf("client #%d info state=%d, tick=%u, refresh=%u\n", 
+                    client->id(), ws_client[index].state, ws_client[index].tick, ws_client[index].refresh);
+
+            // Received text message
+            if (info->opcode == WS_TEXT) {
+              // Is it a command ?
+              if (msg.startsWith("$")) {
+                msg = msg.substring(1);
+                if (msg=="system") {
+                 ws_client[index].state = CLIENT_SYSTEM;
+                } else if (msg=="config") {
+                 DebuglnF("config");
+                 ws_client[index].state = CLIENT_CONFIG;
+                } else if (msg=="log") {
+                 DebuglnF("log");
+                 ws_client[index].state = CLIENT_LOG;
+                } else if (msg=="spiffs") {
+                 DebuglnF("spiffs");
+                 ws_client[index].state = CLIENT_SPIFFS;
+                } else if (msg.startsWith("sensors:") &&  info->len >= 9 ) {
+                  val = msg.substring(8).toInt();
+                  Debugf("sensor=%d",val);
+                  ws_client[index].state = CLIENT_SENSORS;
+                  if (val>=2 && val <=300)
+                    ws_client[index].refresh = val;
+                } else if (msg.startsWith("rgbb:") &&  info->len >= 6 ) {
+                  val = msg.substring(5).toInt();
+                  Debugf("RGB brightness=%d",val);
+                  ws_client[index].state = CLIENT_SENSORS;
+                  if (val>=0 && val <=100)
+                    config.led_bright = val;
+                } else if (msg.startsWith("lpnl:") &&  info->len >= 6 ) {
+                  val = msg.substring(5).toInt();
+                  Debugf("Panel Brightness=%d",val);
+                  ws_client[index].state = CLIENT_SENSORS;
+                  if (val>=0 && val <=100)
+                    config.led_panel = val;
+                }
+              // It's just text, pass to command interpreter
+              } else {
+                if (msg.length()>0) {
+                  handle_serial((char*) msg.c_str(), client->id() );
+                }
+              }
+            } else {
+              //client->binary("I got your binary message");
+            }
+          } // if known client
+
+          // Exit for loop
+          index = MAX_WS_CLIENT;
+
+        } // for all clients
+      }
+    }
+    break;
+  }
+}
+
+/* ======================================================================
+Function: WS_setup
+Purpose : Do the async webserver setup
+Input   : -
+Output  : -
+Comments: -
+====================================================================== */
+void WS_setup(void)
+{
+
+
+  web_server.onFileUpload([](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
+    if(!index) {
+      Debugf("UploadStart: %s\n", filename.c_str());
+    }
+    Debugf("%s", (const char*)data);
+    if(final) {
+      Debugf("UploadEnd: %s (%u)\n", filename.c_str(), index+len);
+    }
+  });
+
+  web_server.onRequestBody([](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+    if(!index) {
+      Debugf("BodyStart: %u\n", total);
+    }
+    Debugf("%s", (const char*) data);
+    if(index + len == total) {
+      Debugf("BodyEnd: %u\n", total);
+    }
+  });
+
+
+  // Create SPIFFS Editor
+  web_server.addHandler(new SPIFFSEditor(http_username,http_password));
+
+  // handle captive portal only for access point
+  web_server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
+
+  //server.on("/", handleRoot);
+  web_server.on("/config_form",  handleFormConfig);
+  web_server.on("/counter_form", handleFormCounter);
+  web_server.on("/sensors",      sensorsJSONTable);
+  web_server.on("/system",       sysJSONTable);
+  web_server.on("/config",       confJSONTable);
+  web_server.on("/spiffs",       spiffsJSONTable);
+  web_server.on("/wifiscan",     wifiScanJSON);
+  web_server.on("/factory_reset",handleFactoryReset);
+  web_server.on("/reset",        handleReset);
+
+  //web_server.rewrite("/index.htm", "dpi.htm").setFilter(ON_AP_FILTER);
+  web_server.serveStatic("/", SPIFFS, "/index.htm").setCacheControl("max-age:86400");
+  web_server.serveStatic("/", SPIFFS, "/"         ).setCacheControl("max-age:86400");
+  
+  // All other not known 
+  // redirect all captive portal to default page
+  web_server.onNotFound(handleNotFound);
+
+  // Init client state machine
+  for (uint8_t i=0; i<MAX_WS_CLIENT ; i++) {
+    ws_client[i].id = 0;
+    ws_client[i].state = CLIENT_NONE;
+    ws_client[i].refresh = 0;
+    ws_client[i].tick = 0;
+  }
+
+  // attach AsyncWebSocket
+  ws.onEvent(webSocketEvent);
+  web_server.addHandler(&ws);
+
+  // Start server
+  web_server.begin();
+  Debug(F("HTTP server started on http://"));
+  if (pdnsServer) {
+    Debugln(WiFi.softAPIP());
+  } else {
+    Debugln(WiFi.localIP());
+  }
+
 }
 

@@ -25,9 +25,25 @@
 
 // Include main project include file
 #include "NRJMeter.h"
+#include "SPIFFSEditor.h"
+
+// Web Socket client state
+typedef struct {
+  uint32_t  id;
+  uint16_t  refresh;
+  uint16_t  tick;
+  uint8_t   state;
+} _ws_client; 
 
 // Exported variables/object instancied in main sketch
 // ===================================================
+extern AsyncWebServer  web_server;
+extern WiFiClient web_client;
+extern AsyncWebSocket ws; 
+
+// State Machine for WebSocket Client;
+extern _ws_client ws_client[]; 
+
 
 // declared exported function from route.cpp
 // ===================================================
@@ -45,5 +61,6 @@ void sendJSON(AsyncWebServerRequest * request);
 void wifiScanJSON(AsyncWebServerRequest * request);
 void handleFactoryReset(AsyncWebServerRequest * request);
 void handleReset(AsyncWebServerRequest * request);
-
+void WS_setup(void);
 #endif
+
