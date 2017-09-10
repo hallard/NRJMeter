@@ -33,6 +33,10 @@ int16_t  sht1x_temperature; // latest temperature value read (*100)
 uint32_t sht1x_last_seen;   // latest read from this sensor (in s)
 uint8_t  sht1x_crc; // CRC
 
+int16_t  mcp3421_power;         // latest power value read 
+uint32_t mcp3421_last_seen;     // latest read from this sensor (in s)
+uint8_t  mcp3421_configRegShdw; // Configuration register
+
 
 // Calculate CRC for a single byte
 void sht1x_calcCRC(uint8_t value, uint8_t *crc) {
@@ -243,6 +247,7 @@ bool sht1x_testDevice()
     sht1x_endTransmission();
   }
 
+  sht1x_last_seen=0;
   return ok;
 }
 
@@ -287,6 +292,193 @@ bool sht1x_reset()
 {
   // Send Reset to device
   return (sht1x_sendCommand(SHT1x_CMD_SOFT_RESET) );
+}
+
+
+
+/* ======================================================================
+Function: mcp4725_setVoltage
+Purpose : Sets the output voltage 
+Input   : fraction of vref. (0..4095) 
+          true to write output to EEPROM
+Output  : -
+Comments: if write to EEEPROM, output will be written to the MCP4725's 
+          internal non-volatile memory, meaning that the DAC will 
+          retain the current voltage output after power-down or reset.
+====================================================================== */
+void mcp4725_setVoltage( uint16_t output, bool writeEEPROM )
+{
+  Wire.beginTransmission(MCP4725_I2C_ADDRESS);
+  if (writeEEPROM)
+    Wire.write(MCP4725_CMD_WRITEDACEEPROM);
+  else
+    Wire.write(MCP4725_CMD_WRITEDAC);
+
+  Wire.write(output / 16);        // Upper data bits (D11.D10.D9.D8.D7.D6.D5.D4)
+  Wire.write((output % 16) << 4); // Lower data bits (D3.D2.D1.D0.x.x.x.x)
+  Wire.endTransmission();
+}
+
+
+/* ======================================================================
+Function: mcp3421_setConfig
+Purpose : set the MCP3421 configuration
+Input   : configuration register
+Output  : true if okay
+Comments: -
+====================================================================== */
+boolean mcp3421_setConfig(uint8_t value)
+{
+  uint8_t err;
+
+  mcp3421_configRegShdw = value;
+
+  // Set configuration register
+  Wire.beginTransmission(MCP3421_I2C_ADDRESS);
+  Wire.write(mcp3421_configRegShdw );
+  err = Wire.endTransmission() ;
+
+  Debugf("mcp3421_setConfig : Writing 0x%02X at address 0x%02X => %d\r\n", mcp3421_configRegShdw, MCP3421_I2C_ADDRESS, err )
+
+  return err==0?true:false;
+}
+
+/* ======================================================================
+Function: mcp3421_init
+Purpose : set the MCP3421 intitial state
+Input   : 
+Output  : true  if okay (module found)
+Comments: -
+====================================================================== */
+boolean mcp3421_init(void)
+{
+  //boolean ret = mcp3421_setConfig(MCP3421_MODE_CONTINUOUS|MCP3421_SIZE_16BIT|MCP3421_GAIN_1X);
+  boolean ret =  mcp3421_setConfig(MCP3421_MODE_CONTINUOUS|MCP3421_SIZE_12BIT|MCP3421_GAIN_1X);
+
+  if (ret) {
+    config.config |= CFG_MCP3421;
+  } else {
+    config.config &= ~CFG_MCP3421;
+  }
+
+  DebugF("mcp3421_init()=");
+  Debugln(ret);
+
+  mcp3421_last_seen=0;
+
+  return ret;
+}
+
+
+/* ======================================================================
+Function: mcp3421_getConfig
+Purpose : get the MCP3421 configuration register
+Input   : -
+Output  : configuration register
+Comments: -
+====================================================================== */
+uint8_t mcp3421_getConfig( void )
+{
+  return mcp3421_configRegShdw ;
+}
+
+/* ======================================================================
+Function: mcp3421_async_sample
+Purpose : do async sampling
+Input   : number of sample do take (0 when just take one if ready)
+Output  : -1 "0xFF' if error
+Comments: for 12, 14 or 16 bits only
+====================================================================== */
+uint8_t mcp3421_async_sample(uint16_t _samples) 
+{
+  static uint16_t samples=0;
+  static int16_t high=0;
+  static unsigned long started = millis();
+  uint8_t adcRegister = 0xFF;
+
+  // We need to start
+  if (_samples>0) {
+    // not finished our previous samples
+    if (samples>0) {
+      Debugf("mcp3421_sample : Not finished previous, remaining %d samples\r\n", samples);
+    } else {
+      // start 
+      samples = _samples;
+      high = 0;
+      started = millis();
+    }
+  }
+
+  // need at least one sample to get ?
+  if (samples>0 && _samples==0) {
+    if((mcp3421_configRegShdw & MCP3421_SIZE_MASK) == MCP3421_SIZE_18BIT) {
+      DebugF("mcp3421_sample : Error we're in MCP3421_SIZE_18BIT mode\r\n");
+    } else {
+      // Get data from ADC
+      if(Wire.requestFrom( (uint8_t) MCP3421_I2C_ADDRESS, (uint8_t) 3) < 3) {
+        Debugf("mcp3421_sample[%d] : I2C Request[3] error!", samples);
+        samples = 0;
+        high = 0;
+      } else {
+        int16_t raw;
+        uint8_t b1,b2 ;
+
+        // Comes back in three bytes, data(MSB) / data(LSB) / Checksum
+        b1 = Wire.read();
+        b2 = Wire.read();
+        adcRegister = Wire.read();
+
+        //Debugf("mcp3421_sample[%d] : Reading 2 bytes from 0x%02X=%02X-%02X => %02X\r\n", samples, MCP3421_I2C_ADDRESS, b1, b2, adcRegister )
+
+        // ADC RDY bit = 0 when conversion is done
+        if ((adcRegister&MCP3421_RDY)==0) {
+          raw = (int16_t)(b1<<8) | b2;
+          if (raw<0) {
+            raw = - raw;
+          }
+          if (raw>high) {
+            Debugf("mcp3421_sample[%d] : peak => %d\r\n", samples, raw);
+            high = raw;
+          }
+
+          // Got one sample
+          samples--;
+        }
+      } 
+      Wire.endTransmission();
+    }
+
+    // it was our last sample ?now calc value
+    // Post Sample calculations
+    if (samples==0) {
+      float power, amp;
+      float mvolt = high ;
+
+      //mvolt = 1000 * 62.5 * raw;
+      uint8_t gain = mcp3421_getConfig() & MCP3421_GAIN_MASK;
+
+      // Gain 2, need to divide by 2
+      if ( gain == MCP3421_GAIN_8X) {
+        mvolt /= 8;
+      } else if ( gain == MCP3421_GAIN_4X ) {
+        mvolt /= 4;
+      } else if ( gain == MCP3421_GAIN_2X ) {
+        mvolt /= 2;
+      }
+
+      // Amp = 5A / 1000 mV => 5mA/mV
+      amp = mvolt * 0.005;
+
+      // Power = Amp * Live Voltage (220V)
+      power = amp * 220;
+
+      mcp3421_power = (int16_t) power;
+  
+      Debugf("mcp3421_sample in %d ms : V=%fmV  A=%fA  P=%fW\r\n", millis()-started, mvolt, amp, power );
+    } 
+  }
+  
+  return adcRegister;
 }
 
 
@@ -502,31 +694,51 @@ int8_t si7021_setResolution(uint8_t res)
 }
 
 /* ======================================================================
-Function: si7021_begin
-Purpose : read the user register from the sensor
+Function: si7021_init
+Purpose : initialize the sensor
 Input   : user register value filled by function
 Output  : true if okay
 Comments: -
 ====================================================================== */
-boolean si7021_begin(uint8_t resolution)
+boolean si7021_init(uint8_t resolution)
 {
   uint8_t ret;
 
-  // Set the resolution we want
-  ret = si7021_setResolution(resolution);
-  if ( ret == 0 ) {
-    ret = true;
-  } else {
-    String log = F("SI7021 : Res=0x");
-    log += String(resolution,HEX);
-    log += F(" => Error 0x");
-    log += String(ret,HEX);
-    Debug(log);
-    ret = false;
+  // Does SI7021 is enabled
+  if (config.sensors.en_si7021) {
+    // Set the resolution we want
+    ret = si7021_setResolution(resolution);
+    if ( ret == 0 ) {
+      config.config |= CFG_SI7021;
+      ret = true;
+    } else {
+      config.config &= ~CFG_SI7021;
+      ret = false;
+      String log = F("SI7021 : Res=0x");
+      log += String(resolution,HEX);
+      log += F(" => Error 0x");
+      log += String(ret,HEX);
+      Debug(log);
+    }
   }
+
+  si7021_last_seen=0;;
 
   return ret; 
 }
+
+/* ======================================================================
+Function: si7021_init
+Purpose : initialize the sensor with default values
+Input   : -
+Output  : true if okay
+Comments: -
+====================================================================== */
+boolean si7021_init(void)
+{
+  return si7021_init(SI7021_RESOLUTION_14T_12RH);
+}
+
 
 /* ======================================================================
 Function: i2c_clearBus
@@ -668,7 +880,7 @@ uint8_t i2c_scan(void)
 
   unsigned long start = millis();
 
-  DebugF("Scanning I2C bus ...");
+  DebuglnF("Scanning I2C bus ...");
 
   // slow down i2C speed in case of slow device
   Wire.setClock(100000);
@@ -684,29 +896,30 @@ uint8_t i2c_scan(void)
     if (error == 0)
     {
       DebugF("I2C device found at address 0x");
+      nDevices++;
       if (address<16)
         Debug("0");
       Debug2(address,HEX);
 
       if (address==0x3C || address==0x3D) {
         DebugF("-> OLED !");
-        config.config |= CFG_LCD;
+        config.config |= CFG_HASOLED;
       } else if (address==0x29 || address==0x39 || address==0x49) {
         DebugF("-> TSL2561 !");
       } else if (address==0x40) {
         DebugF("-> SI70221/HTU21D");
         config.config |= CFG_SI7021;
-      } else if (address==0x60 || address==0x62 || address==0x64) {
-        DebugF("-> MCP4725A"); 
-        Debugln((char)('0' + ((address&0x0F)>>1)));
-      } else if (address==0x61 || address==0x63 || address==0x65) {
-        DebugF("-> MCP4725A"); 
-        Debugln((char)('0' + ((address&0x0F)>>1)));
+      } else if (address>=0x60 && address<=0x62 ) {
+        config.config |= CFG_MCP4725;
+        DebugF("-> MCP4725_A"); 
+        Debugln((char) ('0' + (address&0x03)) );
+      } else if (address>=0x68 && address<=0x6A) {
+        config.config |= CFG_MCP3421;
+        DebugF("-> MCP3421_A"); 
+        Debugln((char)('0' + (address&0x03)));
       } else {
         DebuglnF("-> Unknown device !");
       }
-
-      nDevices++;
     }
   }
 
@@ -722,17 +935,26 @@ uint8_t i2c_scan(void)
 }
 
 
+void sensors_setDAC(uint16_t out_power) 
+{
+
+}
+
 void sensors_setup(void)
 {
-  si7021_last_seen=0;;
-  sht1x_last_seen=0;
   i2c_init();
 
   // Does SI7021 is enabled
-  if (config.sensors.en_si7021) 
-    si7021_begin(SI7021_RESOLUTION_14T_12RH);
-    
-  // Isue à 1st Measurement
+  if (config.sensors.en_si7021) { 
+    si7021_init(); 
+  }
+
+  // Does MCP3421 is enabled
+  if (config.sensors.en_mcp3421) {  
+    mcp3421_init() ; 
+  }
+
+  // Issue à 1st Measurement
   sensors_measure();
 }
 
@@ -782,7 +1004,7 @@ void sensors_measure(void)
     if ((config.config & CFG_SI7021) == 0) 
     {
       i2c_init(true);
-      si7021_begin(SI7021_RESOLUTION_14T_12RH);
+      si7021_init();
       delay(20);
     } else {
       i2c_init(false);
@@ -803,4 +1025,49 @@ void sensors_measure(void)
       DebuglnF("Error reading SI7021");
     }
   } // SI7021 enabled
+
+  // Does 0V 10V Output detected  ?
+  if ( config.config & CFG_MCP4725 )  {
+    float pwr_scale;
+    float power = config.led_panel;
+
+    DebugF("power=");
+    Debug(power);
+
+    DebugF("  scale=");
+    pwr_scale = (4095.0 * power / 100.0);
+    if (pwr_scale<0)    pwr_scale=0;
+    if (pwr_scale>4095) pwr_scale=4095;
+
+    // 0 to 3V3 to 0V-10V = *3 but AOP = * 4 so adjust
+    pwr_scale = pwr_scale / 4.0 * 3.0;
+
+    Debug( (uint32_t) pwr_scale);
+    DebugF( " => VDAC=");
+    Debug( 3300*pwr_scale/4095/1000.0 );
+    Debug("V  Vout=");
+    Debug( 4*3300*pwr_scale/4095/1000.0 );
+    DebuglnF("V");
+
+    mcp4725_setVoltage( (uint32_t) pwr_scale, false);
+  } 
+
+
+  // Does MCP3421 is enabled
+  if (!config.sensors.en_mcp3421) {
+    DebuglnF("MCP3421 Disabled in config");
+  } else {
+    // Re init I2C Bus if needed
+    if ((config.config & CFG_MCP3421) == 0) {
+      i2c_init(false);
+      mcp3421_init();
+      delay(70);
+    }
+
+    // Start sampling if device found
+    if ( config.config & CFG_MCP3421) {
+      mcp3421_async_sample(250);
+    }
+
+  } // MCP3421 enabled
 }

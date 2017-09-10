@@ -6,6 +6,10 @@ index_dropzone.htm
 node_modules/
 dist/
 *portable-chh*
+*.old
+*dpi.js
+*dpi.html
+*dpi.htm
 
 #################
 ## Eclipse
