@@ -8,13 +8,17 @@ var exec = require('child_process').exec, child;
 var jsmain = "js/main.js";
 var jsfile = "js/nrjmeter.js";
 var cssfile = "css/nrjmeter.css";
+var cssmain = "css/main.css";
 var htmfile = "index.htm";
+var editfile= "edit.htm";
+var exclude = ".exclude.files";
 var vfile   = "version.json";
 
-var gzjsmain = "../data/" + jsmain  + ".gz";
-var gzjs     = "../data/" + jsfile  + ".gz";
-var gzcss    = "../data/" + cssfile + ".gz";
-var gzhtm    = "../data/" + htmfile + ".gz";
+var gzjsmain = "../data/" + jsmain   + ".gz";
+var gzjs     = "../data/" + jsfile   + ".gz";
+var gzcss    = "../data/" + cssfile  + ".gz";
+var gzhtm    = "../data/" + htmfile  + ".gz";
+var gzedit   = "../data/" + editfile + ".gz";
 
 // =================
 // javascript Files
@@ -45,6 +49,7 @@ stream.once('open', function(fd) {
 	  'js/bootstrap-switch.min.js',
 	  'js/bootstrap-show-password.min.js',
 	  'js/Chart.min.js',
+	  'js/gauge.min.js',
 	  'js/reconnecting-websocket.min.js',
 		'js/jquery.mousewheel-min.js',
 		'js/jquery.terminal-min.js',
@@ -70,9 +75,8 @@ concat([
   'css/bootstrap-table.min.css',
   'css/bootstrap-slider.min.css',
   'css/bootstrap-switch.min.css',
-  'css/jquery.terminal-min.css',
 //  'css/bootstrap-toggle.min.css',
-  'css/nrjmeter.min.css'
+  'css/jquery.terminal-min.css'
 ], cssfile, function() {
 						var gzip = zlib.createGzip();
 						var inp = fs.createReadStream(cssfile);
@@ -83,30 +87,53 @@ concat([
 					  console.log('finished!');
 					});
 
+fs.createReadStream(cssmain).pipe(fs.createWriteStream( "../data/" + cssmain));
 
 
 // ============
 // main.js file
 // ============
-var gzip = zlib.createGzip();
-var inp = fs.createReadStream(jsmain);
-var out = fs.createWriteStream(gzjsmain);
+//var gzip = zlib.createGzip();
+//var inp = fs.createReadStream(jsmain);
+//var out = fs.createWriteStream(gzjsmain);
 
 console.log('Compressing '+gzjsmain+' file');
-inp.pipe(gzip).pipe(out);
+//inp.pipe(gzip).pipe(out);
+fs.createReadStream(jsmain).pipe(fs.createWriteStream( "../data/" + jsmain));
 console.log('finished!');
 
 // =================
-// index.html file
+// index.htm file
 // =================
-gzip = zlib.createGzip();
-inp = fs.createReadStream(htmfile);
-out = fs.createWriteStream(gzhtm);
-
-console.log('Compressing ' + gzhtm + ' file');
-inp.pipe(gzip).pipe(out);
+console.log('Copying ' + htmfile + ' file');
+fs.createReadStream(htmfile).pipe(fs.createWriteStream( "../data/" + htmfile));
+fs.createReadStream("favicon.ico").pipe(fs.createWriteStream( "../data/favicon.ico"));
 console.log('finished!');
 
+// =================
+// edit.htm file
+// =================
+console.log('Copying ' + editfile + ' file');
+fs.createReadStream(editfile).pipe(fs.createWriteStream( "../data/" + editfile));
+console.log('finished!');
+
+// =================
+// .exlude.file
+// =================
+console.log('Copying ' + exclude + ' file');
+fs.createReadStream(exclude).pipe(fs.createWriteStream( "../data/" + exclude));
+console.log('finished!');
+
+// =================
+// ACE local editor
+// =================
+var acefiles = ["ace", "ext-searchbox", "mode-css", "mode-html", "mode-json", "mode-css", "mode-javascript", "worker-html"];
+for (var i = 0; i < acefiles.length; i++) {
+	var acefile = acefiles[i] + ".js.gz" ;
+	console.log('Copying ' + acefile + ' file');
+	fs.createReadStream(acefile).pipe(fs.createWriteStream( "../data/" + acefile));
+	console.log('finished!');
+}
 
 // ========================
 // Increment version number
