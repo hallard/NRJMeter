@@ -25,14 +25,13 @@
 // Include Arduino header
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
-//#include <ESP8266WebServer.h>
 #include <DNSServer.h>
 #include <ESP8266HTTPClient.h>
-//#include <WebSocketsServer.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include <ArduinoJson.h>
+#include <SPIFFSEditor.h>
 #include <AsyncJson.h>
+#include <ArduinoJson.h>
 #include <Hash.h>
 #include <ESP8266mDNS.h>
 #include <WifiUdp.h>
@@ -54,7 +53,17 @@ extern "C" {
 #include "config.h"
 #include "sensors.h"
 #include "NeoPixelWrapper.h"
+#include "EmonLib.h"
 
+
+// OTA Prexif Name 
+#if defined (ARDUINO_ESP8266_WEMOS_D1MINI) || defined (ARDUINO_ESP8266_WEMOS_D1)
+  #define OTA_PREFIX_ID   'W'  
+#elif defined (ARDUINO_ESP8266_NODEMCU)
+  #define OTA_PREFIX_ID   'N'
+#else
+  #define OTA_PREFIX_ID   'E'
+#endif
 
 #define NRJMETER_VERSION_MAJOR 1
 #define NRJMETER_VERSION_MINOR 0
@@ -125,32 +134,24 @@ extern "C" {
 
 // Exported variables/object instancied in main sketch
 // ===================================================
-//extern ESP8266WebServer server;
-extern DNSServer dnsServer;
-//extern WebSocketsServer webSocket;
-extern AsyncWebServer server;
-extern AsyncWebSocket ws; 
+extern DNSServer * pdnsServer ;
 extern WiFiUDP OTA;
 #ifdef RGB_LED_PIN
   extern long rgb_led_timer ;
 #endif
-
-// Web Socket client state
-typedef struct {
-  uint32_t  id;
-  uint16_t  refresh;
-  uint16_t  tick;
-  uint8_t   state;
-} _ws_client; 
 
 extern unsigned long seconds;
 extern unsigned long wifi_connect_time;
 extern uint8_t heartbeat;
 extern boolean task_emoncms ;
 extern boolean task_sensors ;
+extern boolean task_reconf ;
+extern uint16_t power_samples;
+
 
 // Exported function located in main sketch
 // ===================================================
+void dummy(void);
 void handle_net(void);
 #ifdef RGB_LED_PIN
 void LedRGBSetup(void);

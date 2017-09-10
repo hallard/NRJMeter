@@ -22,11 +22,9 @@
 // Include Arduino header
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
-//#include <ESP8266WebServer.h>
 #include <DNSServer.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266mDNS.h>
-//#include <WebSocketsServer.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
@@ -55,12 +53,6 @@ static unsigned long wdt_loop;
 //WiFiManager wifi(0);
 //ESP8266WebServer server(80);
 //WebSocketsServer webSocket = WebSocketsServer(8081);
-
-AsyncWebServer server(80);
-AsyncWebSocket ws("/ws"); // access at ws://[esp ip]/ws
-
-// State Machine for WebSocket Client;
-_ws_client ws_client[MAX_WS_CLIENT]; 
 
 // DNS server
 //DNSServer dnsServer;
@@ -120,8 +112,10 @@ boolean task_emoncms  = false;
 boolean task_sensors  = false;
 boolean task_jeedom   = false;
 boolean task_domoticz = false;
+boolean task_reconf   = false;
 unsigned long seconds = 0;
 
+DNSServer * pdnsServer = NULL;
 
 /* ======================================================================
 Function: wdt_check
@@ -422,6 +416,9 @@ int WifiConnect(boolean with_timeout)
 {
   int ret = WiFi.status();
 
+  // Set hostname
+  WiFi.hostname(config.host);
+
   // If not already connected
   if (ret != WL_CONNECTED) {
     if (config.config & CFG_WIFI) {
@@ -509,12 +506,12 @@ int WifiHandleConn(boolean setup = false)
     //WiFi.onEvent(WifiEvent);
     WiFi.mode(WIFI_AP_STA);
 
-    DebuglnF("========== SDK Saved parameters Start"); 
-    #ifdef DEBUG_SERIAL
-    WiFi.printDiag(DEBUG_SERIAL);
-    #endif
-    DebuglnF("========== SDK Saved parameters End"); 
-    Debugflush();
+    //DebuglnF("========== SDK Saved parameters Start"); 
+    //#ifdef DEBUG_SERIAL
+    //WiFi.printDiag(DEBUG_SERIAL);
+    //#endif
+    //DebuglnF("========== SDK Saved parameters End"); 
+    //Debugflush();
 
     //  correct SSID
     if (*config.ssid) {
@@ -546,6 +543,7 @@ int WifiHandleConn(boolean setup = false)
       Debug(config.ap_ssid);
       Debugflush();
 
+
       // STA+AP Mode without connected to STA, autoconnec will search
       // other frequencies while trying to connect, this is causing issue
       // to AP mode, so disconnect will avoid this
@@ -566,12 +564,22 @@ int WifiHandleConn(boolean setup = false)
         WiFi.softAP(config.ap_ssid);
       }
 
-      // Setup the DNS server redirecting all the domains to the apIP 
-      //dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-      //dnsServer.start(53, "*", WiFi.softAPIP());
+      delay(500); // Withoutdelay I've seen the IP address blank
 
       DebugF("\r\nIP address   : "); Debugln(WiFi.softAPIP());
       DebugF("MAC address  : "); Debugln(WiFi.softAPmacAddress());
+
+      if (pdnsServer) {
+        delete pdnsServer; 
+        pdnsServer=NULL;
+      }
+
+      if ((pdnsServer = new DNSServer()) != NULL) {
+        // Setup the DNS server redirecting all the domains to the apIP 
+        DebuglnF("Started DNS Server"); 
+        pdnsServer->setErrorReplyCode(DNSReplyCode::NoError);
+        pdnsServer->start(53, "*", WiFi.softAPIP());
+      }
     } 
 
     // Set OTA parameters
@@ -579,6 +587,52 @@ int WifiHandleConn(boolean setup = false)
     ArduinoOTA.setHostname(config.host);
     ArduinoOTA.setPassword(config.ota_auth);
     ArduinoOTA.begin();
+
+    // OTA callbacks
+    ArduinoOTA.onStart([]() { 
+      // Clean SPIFFS
+      SPIFFS.end();
+      LedRGBOFF();
+      DebuglnF("OTA Update Started");
+      ota_blink = true;
+      digitalWrite(LED_BUILTIN, 1);
+      pinMode(LED_BUILTIN, OUTPUT);
+    });
+
+    ArduinoOTA.onEnd([]() { 
+      pinMode(LED_BUILTIN, INPUT);
+      digitalWrite(LED_BUILTIN, HIGH);
+      DebuglnF("OTA Update finished restarting");
+      LedRGBON(COLOR_GREEN);
+      rgb_led.Show();  
+    });
+
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+      char buff[8];
+      uint8_t percent=progress/(total/100); 
+      sprintf_P(buff, "%03d %%\r", percent); 
+      Debug(buff); 
+
+      digitalWrite(LED_BUILTIN, percent%2==0);
+
+      // hue from 0.0 to 1.0 (rainbow) with 33% (of 0.5f) luminosity
+      rgb_led.SetPixelColor(0, HslColor( (float) percent * 0.01f , 1.0f, 0.3f ));
+      rgb_led.Show();  
+    });
+
+    ArduinoOTA.onError([](ota_error_t error) {
+      pinMode(LED_BUILTIN, INPUT);
+      for (unsigned int pixel=0; pixel<config.led_num ; pixel++) 
+        rgb_led.SetPixelColor(pixel, HslColor(COLOR_RED, 1.0f, 0.25f));
+      rgb_led.Show();  
+      Debugf("Update Error[%u]: ", error);
+      if (error == OTA_AUTH_ERROR) { DebuglnF("Auth Failed");}
+      else if (error == OTA_BEGIN_ERROR) { DebuglnF("Begin Failed");}
+      else if (error == OTA_CONNECT_ERROR) { DebuglnF("Connect Failed");}
+      else if (error == OTA_RECEIVE_ERROR) { DebuglnF("Receive Failed");}
+      else if (error == OTA_END_ERROR) { DebuglnF("End Failed");}
+      ESP.restart(); 
+    });
 
     WiFiMode_t con_type = WiFi.getMode();
 
@@ -598,6 +652,7 @@ int WifiHandleConn(boolean setup = false)
           DebuglnF("UNKNOWN");
           LedRGBON(COLOR_RED);
         }
+        rgb_led.Show();  
       }
     #endif
 
@@ -607,7 +662,7 @@ int WifiHandleConn(boolean setup = false)
     // Usefull just after 1st connexion when called from setup() before
     // launching potentially buggy main()
     unsigned long my_start = millis();
-
+    DebugF("Init processes waiting for OTA ...");
     // 3 seconds time out
     while( millis() - my_start < 3000 ) {
      
@@ -619,6 +674,7 @@ int WifiHandleConn(boolean setup = false)
       ArduinoOTA.handle();
       yield(); 
     }
+    DebuglnF("Done");
 
     // Wifi is activated
     wifi_state = true;
@@ -628,139 +684,6 @@ int WifiHandleConn(boolean setup = false)
   return WiFi.status();
 }
 
-/* ======================================================================
-Function: webSocketEvent
-Purpose : Manage routing of websocket events
-Input   : -
-Output  : - 
-Comments: -
-====================================================================== */
-void webSocketEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len)
-{
-  //Handle WebSocket event
-  switch(type) {
-    
-    case WS_EVT_DISCONNECT:
-      //client disconnected
-      Debugf("ws[%s][%u] Disconnect ", server->url(), client->id());
-
-      for (uint8_t i=0; i<MAX_WS_CLIENT ; i++) {
-        if (ws_client[i].id == client->id() ) {
-          ws_client[i].id = 0;
-          ws_client[i].state = CLIENT_NONE;
-          ws_client[i].refresh = 0;
-          ws_client[i].tick = 0;
-          Debugf("freed[%d]\n", i);
-          i=MAX_WS_CLIENT; // Exit for loop
-        }
-      }
-    break;
-
-    case WS_EVT_CONNECT:
-      uint8_t i;
-      //client connected
-      Debugf("ws[%s][%u] connect ", server->url(), client->id() );
-      // Search a free location to store client information
-      for (i=0; i<MAX_WS_CLIENT ; i++) {
-        if (ws_client[i].id == 0 ) {
-          ws_client[i].id = client->id();
-          ws_client[i].state = CLIENT_NONE;
-          ws_client[i].refresh = 0;
-          ws_client[i].tick = 0;
-          Debugf("added[%d]\n", i);
-          i=MAX_WS_CLIENT+1; // Exit for loop
-        }
-      }
-      if (i>MAX_WS_CLIENT) {
-        DebuglnF("not added, table is full");
-      }
-    break;
-
-    case WS_EVT_ERROR: 
-      //error was received from the other end
-      Debugf("ws[%s][%u] error(%u): %s\n", server->url(), client->id(), *((uint16_t*)arg), (char*)data);    
-    break;
-
-    case WS_EVT_PONG: 
-      //pong message was received (in response to a ping request maybe)
-      Debugf("ws[%s][%u] pong[%u]: %s\n", server->url(), client->id(), len, (len)?(char*)data:"");  
-    break;
-
-    case WS_EVT_DATA: {
-      //data packet
-      AwsFrameInfo * info = (AwsFrameInfo*) arg;
-
-      if (info->final && info->index == 0 && info->len == len) {
-        //the whole message is in a single frame and we got all of it's data
-        Debugf("ws[%s][#%u] %s-msg[%lu]: ", server->url(), client->id(), (info->opcode == WS_TEXT)?"text":"binary", (uint32_t) info->len);
-
-        // Search if it's a known client
-        for (uint8_t index=0; index<MAX_WS_CLIENT ; index++) {
-          if (ws_client[index].id == client->id() ) {
-            String msg = "";
-            char buff[3];
-            int val;
-
-            // Grab all data
-            for(size_t i=0; i < info->len; i++) {
-              if (info->opcode == WS_TEXT ) {
-                msg += (char) data[i];
-              } else {
-                sprintf(buff, "%02x ", (uint8_t) data[i]);
-                msg += buff ;
-              }
-            }
-            Debugf("known[%d] '%s'\n", index, msg.c_str());
-            Debugf("client #%d info state=%d, tick=%u, refresh=%u\n", 
-                    client->id(), ws_client[index].state, ws_client[index].tick, ws_client[index].refresh);
-
-            // Received text message
-            if (info->opcode == WS_TEXT) {
-              // Is it a command ?
-              if (msg.startsWith("$")) {
-                msg = msg.substring(1);
-                if (msg=="system") {
-                 ws_client[index].state = CLIENT_SYSTEM;
-                } else if (msg=="config") {
-                 DebuglnF("config");
-                 ws_client[index].state = CLIENT_CONFIG;
-                } else if (msg=="log") {
-                 DebuglnF("log");
-                 ws_client[index].state = CLIENT_LOG;
-                } else if (msg=="spiffs") {
-                 DebuglnF("spiffs");
-                 ws_client[index].state = CLIENT_SPIFFS;
-                } else if (msg.startsWith("sensors:") &&  info->len >= 9 ) {
-                  val = msg.substring(8).toInt();
-                  Debugf("sensor=%d",val);
-                  ws_client[index].state = CLIENT_SENSORS;
-                  if (val>=2 && val <=300)
-                    ws_client[index].refresh = val;
-                } else if (msg.startsWith("rgbb:") &&  info->len >= 6 ) {
-                  val = msg.substring(5).toInt();
-                  Debugf("RGB brightness=%d",val);
-                  ws_client[index].state = CLIENT_SENSORS;
-                  if (val>=0 && val <=100)
-                    config.led_bright = val;
-                }
-              // It's just text, pass to command interpreter
-              } else {
-                handle_serial((char*) msg.c_str(), client->id() );
-              }
-            } else {
-              //client->binary("I got your binary message");
-            }
-          } // if known client
-
-          // Exit for loop
-          index = MAX_WS_CLIENT;
-
-        } // for all clients
-      }
-    }
-    break;
-  }
-}
 
 /* ======================================================================
 Function: setup
@@ -809,18 +732,20 @@ void setup()
   DebugF("  jeedom=");    Debug(sizeof(_jeedom));
   DebugF("  domoticz=");  Debug(sizeof(_domoticz));
   DebugF("  counter=");   Debug(sizeof(_counter));
-  Debugln(')');
+  #ifdef ARDUINOJSON_ENABLE_ALIGNMENT 
+    Debugln(") Aligned");
+  #else
+    Debugln(") Unaligned");
+  #endif
+
   Debugflush();
 
   // Check File system init 
-  if (!SPIFFS.begin())
-  {
+  if (!SPIFFS.begin()) {
     // Serious problem
     DebuglnF("SPIFFS Mount failed");
   } else {
-   
     DebuglnF("SPIFFS Mount succesfull");
-
     Dir dir = SPIFFS.openDir("/");
     while (dir.next()) {    
       String fileName = dir.fileName();
@@ -829,10 +754,10 @@ void setup()
     }
     DebuglnF("");
   }
-  
+
   // Read Configuration from EEP
   if (readConfig(true)) {
-      DebuglnF("Good CRC, not set!");
+    DebuglnF("Good CRC, not set!");
   } else {
     // Reset Configuration
     resetConfig();
@@ -854,175 +779,8 @@ void setup()
   // start Wifi connect or soft AP
   WifiHandleConn(true);
 
-  // OTA callbacks
-  ArduinoOTA.onStart([]() { 
-    LedRGBOFF();
-    DebuglnF("Update Started");
-    ota_blink = true;
-    digitalWrite(16, 1);
-    pinMode(16, OUTPUT);
-  });
-
-  ArduinoOTA.onEnd([]() { 
-    pinMode(16, INPUT);
-    LedRGBOFF();
-    DebuglnF("Update finished restarting");
-  });
-
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-
-    digitalWrite(16, ota_blink);
-    if (config.led_num > 1) {
-      unsigned int percent = progress / (total / 100);
-      for (unsigned int pixel=0; pixel<(100/config.led_num) * percent  ; pixel++) 
-        rgb_led.SetPixelColor(pixel, HslColor(COLOR_MAGENTA,1.0f, 0.25f));
-      rgb_led.Show();  
-    } else {
-      if (ota_blink) {
-        rgb_led.SetPixelColor(0, HslColor(COLOR_MAGENTA,1.0f, 0.25f));
-        rgb_led.Show();  
-      } else {
-        LedRGBOFF();
-      }
-    }
-    ota_blink = !ota_blink;
-    //Debugf("Progress: %u%%\n", (progress / (total / 100)));
-  });
-
-  ArduinoOTA.onError([](ota_error_t error) {
-    pinMode(16, INPUT);
-    for (unsigned int pixel=0; pixel<config.led_num ; pixel++) 
-      rgb_led.SetPixelColor(pixel, HslColor(COLOR_RED, 1.0f, 0.25f));
-    rgb_led.Show();  
-    Debugf("Update Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) { DebuglnF("Auth Failed");}
-    else if (error == OTA_BEGIN_ERROR) { DebuglnF("Begin Failed");}
-    else if (error == OTA_CONNECT_ERROR) { DebuglnF("Connect Failed");}
-    else if (error == OTA_RECEIVE_ERROR) { DebuglnF("Receive Failed");}
-    else if (error == OTA_END_ERROR) { DebuglnF("End Failed");}
-    ESP.restart(); 
-  });
-
-  //server.on("/", handleRoot);
-  server.on("/config_form", handleFormConfig);
-  server.on("/counter_form", handleFormCounter);
-  server.on("/sensors", sensorsJSONTable);
-  server.on("/system", sysJSONTable);
-  server.on("/config", confJSONTable);
-  server.on("/spiffs", spiffsJSONTable);
-  server.on("/wifiscan", wifiScanJSON);
-  server.on("/factory_reset", handleFactoryReset);
-  server.on("/reset", handleReset);
-
-  // Captive portal
-  //server.on("/generate_204", handleRoot);  
-  ///server.on("/fwlink", handleRoot);        //Microsoft captive portal. Maybe not needed. Might be handled by notFound handle
-
-  //Android/Chrome OS captive portal check.
-  server.on("/generate_204", [&](AsyncWebServerRequest *request) { 
-    AsyncWebServerResponse * response = request->beginResponse(204, "text/plain", "");
-    response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    response->addHeader("Pragma", "no-cache");
-    response->addHeader("Expires", "-1");
-    request->send(response);
-  });
-
-
-  // handler for the hearbeat
-  server.on("/hb", HTTP_GET, [&](AsyncWebServerRequest *request){
-    AsyncWebServerResponse * response = request->beginResponse(200, "text/html", R"(OK)");
-    response->addHeader("Connection", "close");
-    response->addHeader("Access-Control-Allow-Origin", "*");
-    request->send(response);
-  });
-
-
-  // handler for the /update form POST (once file upload finishes)
-  /*
-  server.on("/update", HTTP_POST, 
-    // handler once file upload finishes
-    [&](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-
-      // Upload started
-      if(!index) {
-        uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-        WiFiUDP::stopAll();
-        Debugf("Update: %s\n", filename.c_str());
-        LedRGBON(COLOR_MAGENTA);
-        ota_blink = true;
-
-        //start with max available size
-        if(!Update.begin(maxSketchSpace)) {
-          #ifdef DEBUG_SERIAL
-          Update.printError(Serial1);
-          #endif
-        }
-      }
-
-      // We're receiving file datas
-      if (ota_blink) {
-        LedRGBON(COLOR_MAGENTA);
-      } else {
-        LedRGBOFF();
-      }
-      ota_blink = !ota_blink;
-      Debug(".");
-
-      if( Update.write(data, len) != len ) {
-        #ifdef DEBUG_SERIAL
-        Update.printError(Serial1);
-        #endif
-      }
-
-
-      // File uploaded
-      if (final) {
-        AsyncWebServerResponse * response;
-        //true to set the size to the current progress
-        if(Update.end(true) && !Update.hasError() ) {
-          response = request->beginResponse(200, "text/plain", "OK");
-          Debugf("Update Success: %u\nRebooting...\n", 0 upload.totalSize);
-        } else {
-          response = request->beginResponse(200, "text/plain", "FAIL");
-          #ifdef DEBUG_SERIAL
-          Update.printError(Serial1);
-          #endif
-        }
-        response->addHeader("Connection", "close");
-        response->addHeader("Access-Control-Allow-Origin", "*");
-        request->send(response);
-
-        LedRGBOFF();
-
-        ESP.restart();
-      }
-    }
-    
-  );
-*/
-
-
-  // All other not known 
-  server.onNotFound(handleNotFound);
-  
-  // serves all SPIFFS Web file with 24hr max-age control
-  server.serveStatic("/", SPIFFS, "/index.htm", "max-age=86400");
-  server.serveStatic("/", SPIFFS, "/",          "max-age=86400"); 
-
-  // Init client state machine
-  for (uint8_t i=0; i<MAX_WS_CLIENT ; i++) {
-    ws_client[i].id = 0;
-    ws_client[i].state = CLIENT_NONE;
-    ws_client[i].refresh = 0;
-    ws_client[i].tick = 0;
-  }
-
-  // attach AsyncWebSocket
-  ws.onEvent(webSocketEvent);
-  server.addHandler(&ws);
-
-  // Start server
-  server.begin();
+  // Setup Web server and WenSockets
+  WS_setup();
 
   // Display configuration
   showConfig();
@@ -1046,11 +804,14 @@ void setup()
   wdt_ticker.attach_ms(((WDT_RESET_TIME / 3) * 1000), wdt_check);
 
   // Emoncms first sent
-  if (config.emoncms.freq) 
+  if (config.emoncms.freq) {
     task_emoncms = true;
+  }
 
   // Let time out setup AP
   wifi_end_setup = false;
+
+  dummy();
 }
 
 
@@ -1092,15 +853,16 @@ void handle_net()
 {
   // Do all related network stuff
   ArduinoOTA.handle();  // OTA
-  //yield();
+  yield();
+
 
   // DNS Server in case of AP
-  /*
-  if (config.config & CFG_AP)  {
-    dnsServer.processNextRequest();  
+  //if (config.config & CFG_AP)  {
+  if (pdnsServer)  {
+    pdnsServer->processNextRequest();  
     yield();
   }
-  */
+  
 }
 
 /* ======================================================================
@@ -1274,7 +1036,7 @@ void loop()
     //Debugflush();
 
   } else if (task_sensors) { 
-    Debugf("-- [%05ld] task_sensors...", seconds);
+    Debugf("-- [%05ld] task_sensors...\r\n", seconds);
     sensors_measure(); 
     task_sensors=false; 
     tick_sensors = 0;
@@ -1291,7 +1053,15 @@ void loop()
     domoticzPost(); 
     task_domoticz=false; 
     tick_domoticz = 0;
+
+  } else if (task_reconf) { 
+    DebugF("task_reconf...");
+    LedRGBSetup();
+    task_reconf=false; 
   }
+
+  // Power Async sample acquisition
+  mcp3421_async_sample();
 
   // manage Blinking LED
   // No Wifi no LED
