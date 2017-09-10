@@ -29,12 +29,14 @@ const char FP_NL[] 					PROGMEM = "\n";
 // Used in various place
 const char FP_TEMPERATURE[] PROGMEM = "temperature";
 const char FP_HUMIDITY[]    PROGMEM = "humidity";
+const char FP_POWER[]       PROGMEM = "power";
 const char FP_SEEN[]        PROGMEM = "seen";
 
 const char FP_SSID[]        PROGMEM = "ssid";
 const char FP_RSSI[]        PROGMEM = "rssi";
 const char FP_ENCRYPTION[]  PROGMEM = "enc";
 const char FP_CHANNEL[]     PROGMEM = "chan";
+const char FP_STATUS[]      PROGMEM = "status";
 
 // Used in JSON array for bootstrap table
 const char FP_NA[] PROGMEM = "na";
@@ -87,9 +89,11 @@ const char CFG_COUNT2_VALUE[] PROGMEM = "cnt_val_2";
 
 const char CFG_SENS_SI7021[] 		PROGMEM = "sens_si7021";
 const char CFG_SENS_SHT10[] 		PROGMEM = "sens_sht10";
+const char CFG_SENS_MCP3421[] 	PROGMEM = "sens_mcp3421";
 const char CFG_SENS_FREQ[] 		  PROGMEM = "sens_freq";
 const char CFG_SENS_HUM_LED[] 	PROGMEM = "sens_hum_led";
 const char CFG_SENS_TEMP_LED[] 	PROGMEM = "sens_temp_led";
+const char CFG_SENS_PWR_LED[] 	PROGMEM = "sens_pwr_led";
 
 const char CFG_LED_BRIGHTNESS[] PROGMEM = "cfg_led_bright";
 const char CFG_LED_HEARTBEAT[] 	PROGMEM = "cfg_led_hb";
@@ -103,6 +107,10 @@ const char CFG_CFG_RGBLED[] PROGMEM = "cfg_rgb";
 const char CFG_CFG_DEBUG[] 	PROGMEM = "cfg_debug";
 const char CFG_CFG_OLED[] 	PROGMEM = "cfg_oled";
 const char CFG_CFG_STATIC[]	PROGMEM = "cfg_static";
+const char CFG_CFG_SHT10[]	PROGMEM = "has_sht10";
+const char CFG_CFG_SI7021[]	PROGMEM = "has_si7021";
+const char CFG_CFG_MCP3421[]PROGMEM = "has_mcp3421";
+const char CFG_CFG_HASOLED[]PROGMEM = "has_oled";
 
 const char HELP_HELP[] PROGMEM = "\r\n===== Help\r\n"
 	    "show help [sys|wifi|data|sens|jdom|domz|cnt]   : show full help or section\r\n"
@@ -201,6 +209,7 @@ const char HELP_COUNTER[] PROGMEM  = "\r\n===== Counter Index (1 or 2 only)\r\n"
 const char HELP_SENSOR[] PROGMEM = 	"\r\n===== Sensors\r\n" 
 	    "sens si7021 on|off : Enable/Disable SI7021 internal sensor\r\n" 
 	    "sens sht10 on|off  : Enable/Disable SHT10 external sensor\r\n" 
+	    "sens mcp3421 on|off: Enable/Disable ADC MCP3421 Power external sensor\r\n" 
 	    "sens freq f        : Set sensor measure interval each f sec\r\n" 
 
 	    "sens temp led l,h   : Set RGB Led temperature warning low/High Range\r\n" 

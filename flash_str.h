@@ -33,12 +33,14 @@ extern const char FP_NL[];
 // Used in various place
 extern const char FP_TEMPERATURE[];
 extern const char FP_HUMIDITY[];
+extern const char FP_POWER[];
 extern const char FP_SEEN[];
 
 extern const char FP_SSID[];
 extern const char FP_RSSI[];
 extern const char FP_ENCRYPTION[];
 extern const char FP_CHANNEL[];
+extern const char FP_STATUS[];
 
 // Used in JSON array for bootstrap table
 extern const char FP_NA[] ;
@@ -92,9 +94,11 @@ extern const char CFG_COUNT2_VALUE[] ;
 
 extern const char CFG_SENS_SI7021[] 	;
 extern const char CFG_SENS_SHT10[] 		;
+extern const char CFG_SENS_MCP3421[]	;
 extern const char CFG_SENS_FREQ[] 		;
 extern const char CFG_SENS_HUM_LED[] 	;
 extern const char CFG_SENS_TEMP_LED[] ;
+extern const char CFG_SENS_PWR_LED[]  ;
 
 extern const char CFG_LED_BRIGHTNESS[] ;
 extern const char CFG_LED_HEARTBEAT[]  ;
@@ -109,6 +113,11 @@ extern const char CFG_CFG_RGBLED[] 	;
 extern const char CFG_CFG_DEBUG[] 	;
 extern const char CFG_CFG_OLED[] 		;
 extern const char CFG_CFG_STATIC[]	;
+extern const char CFG_CFG_SHT10[]	  ;
+extern const char CFG_CFG_SI7021[]  ;
+extern const char CFG_CFG_MCP3421[] ;
+extern const char CFG_CFG_HASOLED[] ;
+
 
 extern const char HELP_HELP[];
 extern const char HELP_SYS[];
