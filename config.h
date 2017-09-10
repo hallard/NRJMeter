@@ -66,6 +66,8 @@
 #define CFG_SENSORS_TEMP_MAX_WARN (22)
 #define CFG_SENSORS_HUM_MIN_WARN  (30)
 #define CFG_SENSORS_HUM_MAX_WARN  (90)
+#define CFG_SENSORS_PWR_MIN_WARN  (100)
+#define CFG_SENSORS_PWR_MAX_WARN  (400)
 #define CFG_SENSORS_DEFAULT_FREQ  (60) // every 60 seconds
 
 // Port pour l'OTA
@@ -85,6 +87,9 @@
 #define CFG_AP          0x0008  // Enable Wifi Access Point
 #define CFG_SI7021      0x0010  // SI7021 seen
 #define CFG_SHT10       0x0020  // SHT10 seen
+#define CFG_MCP3421     0x0040  // MCP3421 seen
+#define CFG_MCP4725     0x0080  // MCP4725 seen
+#define CFG_HASOLED     0x0100  // I2C OLED seen
 #define CFG_STATIC      0x2000  // Enable Static IP
 #define CFG_WIFI        0x4000  // Enable Wifi
 #define CFG_BAD_CRC     0x8000  // Bad CRC when reading configuration
@@ -112,10 +117,10 @@ typedef struct
   char  host[CFG_EMON_HOST_SIZE+1]; 		// FQDN 
   char  apikey[CFG_EMON_APIKEY_SIZE+1]; // Secret
   char  url[CFG_EMON_URL_SIZE+1];  			// Post URL
-  uint16_t port;   									    // Protocol port (HTTP/HTTPS)
-  uint16_t node;     									  // optional node
+  uint32_t port;   									    // Protocol port (HTTP/HTTPS)
+  uint32_t node;     									  // optional node
   uint32_t freq;                        // refresh rate
-  uint8_t filler[21];									  // in case adding data in config avoiding loosing current conf by bad crc*/
+  uint8_t filler[17];									  // in case adding data in config avoiding loosing current conf by bad crc*/
 } _emoncms;
 
 // Config for sensors / Counter
@@ -126,13 +131,16 @@ typedef struct
   int16_t temp_max_warn;  // Temperature offset max warning
   int16_t hum_min_warn;   // humidity offset min warning 
   int16_t hum_max_warn;   // humidity offset max warning
+  int16_t pwr_min_warn;   // power offset min warning 
+  int16_t pwr_max_warn;   // pwer offset max warning
   uint32_t freq;          // refresh rate
   int8_t  en_si7021;      // enable SI7021 sensor
   int8_t  en_sht10;       // enable SH10 sensor
+  int8_t  en_mcp3421;     // enable ADC MCP3421 sensor
   uint8_t filler01;       // in case adding data in config avoiding loosing current conf by bad crc*/
   uint32_t counter1;      // Counter 1
   uint32_t counter2;      // Counter 2
-  uint8_t filler[105];    // in case adding data in config avoiding loosing current conf by bad crc*/
+  uint8_t filler[100];    // in case adding data in config avoiding loosing current conf by bad crc*/
 } _sensors;
 
 // Config for jeedom
@@ -197,7 +205,8 @@ typedef struct
   uint32_t mask;                   // Static Wifi NetMask
   uint32_t gw;                     // Static Wifi Gateway Address
   uint32_t dns;                    // Static Wifi DNS server Address
-  uint8_t  filler[77];      		   // in case adding data in config avoiding loosing current conf by bad crc
+  uint8_t  led_panel;              // LED Panel brigthness
+  uint8_t  filler[76];      		   // in case adding data in config avoiding loosing current conf by bad crc
   _emoncms emoncms;                // Emoncms configuration
   _sensors sensors;                // Sensors configuration
   _jeedom  jeedom;                 // JeeDom configuration

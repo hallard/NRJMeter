@@ -151,7 +151,7 @@ bool saveConfig (uint32_t clientid)
   uint8_t * pconfig ;
   bool ret_code;
 
-  //eepromDump(32);
+  //eepromDump(32, clientid);
 
   // Init pointer 
   pconfig = (uint8_t *) &config ;
@@ -185,7 +185,7 @@ bool saveConfig (uint32_t clientid)
   // Send to correct client output 
   outputBuffer(buff, clientid);
   
-  //eepromDump(32);
+  //eepromDump(32, clientid);
   
   // return result
   return (ret_code);
@@ -204,14 +204,15 @@ void resetConfig(uint32_t clientid)
   memset(&config, 0, sizeof(_Config));
 
   // Set default Hostname
-  sprintf_P(config.host, PSTR("NRJMeter_%06X"), ESP.getChipId());
-  //sprintf_P(config.ota_auth, PSTR("NRJMeter%s_%06X_Ch2I"), DEFAULT_OTA_AUTH, ESP.getChipId() );
-  sprintf_P(config.ota_auth, PSTR("%s_Ch2I"), "NRJMeter" );
+  sprintf_P(config.host, PSTR("NRJMeter-%c%06X"), OTA_PREFIX_ID, ESP.getChipId());
   config.ota_port = DEFAULT_OTA_PORT ;
   // AP SSID
-  sprintf_P(config.ap_ssid, PSTR("ch2i_NRJMeter_%06X"), ESP.getChipId());
+  sprintf_P(config.ap_ssid, PSTR("ch2i-NRJMeter-%c%06X"), OTA_PREFIX_ID, ESP.getChipId());
 
   // Add other init default config here
+
+//  strcpy_P(config.ssid, PSTR("YOUR-AP"));
+//  strcpy_P(config.psk, PSTR("Your-PSK"));
 
   // Emoncms
   strcpy_P(config.emoncms.host, PSTR(CFG_EMON_DEFAULT_HOST));
@@ -240,6 +241,8 @@ void resetConfig(uint32_t clientid)
   config.sensors.temp_max_warn  = CFG_SENSORS_TEMP_MAX_WARN ;
   config.sensors.hum_min_warn   = CFG_SENSORS_HUM_MIN_WARN;
   config.sensors.hum_max_warn   = CFG_SENSORS_HUM_MAX_WARN ;
+  config.sensors.pwr_min_warn   = CFG_SENSORS_PWR_MIN_WARN;
+  config.sensors.pwr_max_warn   = CFG_SENSORS_PWR_MAX_WARN ;
   config.sensors.freq           = CFG_SENSORS_DEFAULT_FREQ ;
 
   config.config = (CFG_RGB_LED | CFG_DEBUG | CFG_WIFI ) ;
@@ -297,14 +300,23 @@ void showConfig(uint16_t section, uint32_t clientid )
     if(config.config&CFG_RGB_LED) strcat_P(buff, PSTR("RGBLED "));
     if(config.config&CFG_DEBUG)   strcat_P(buff, PSTR("DEBUG "));
     if(config.config&CFG_LCD)     strcat_P(buff, PSTR("OLED "));
+
     if(config.config&CFG_SI7021)  strcat_P(buff, PSTR("SI7021 "));
     if(config.config&CFG_SHT10)   strcat_P(buff, PSTR("SHT10 "));
+    if(config.config&CFG_MCP3421) strcat_P(buff, PSTR("MCP3421 "));
 
     const char* ledtype[] = { "None", "RGB", "GRB", "RGBW", "GRBW" };
     sprintf_P(buff+strlen(buff), PSTR("\nRGB LED  : #%d GPIO%d %s  Brigth %d %%  Heartbeat %d sec\n"), 
                     config.led_num, config.led_gpio,
                     ledtype[(uint8_t)config.led_type],
                     config.led_bright, config.led_hb/10); 
+
+    OUT("OTA Port : %d\nOTA Auth : ", config.ota_port); 
+    if (*config.ota_auth) {
+      OUT("%s\n", config.ota_auth); 
+    } else {
+      OUT("%s\n", "none"); 
+    }
 
     // Send to correct client output 
     outputBuffer(buff, clientid);
@@ -389,6 +401,10 @@ void showConfig(uint16_t section, uint32_t clientid )
     OUT(" CLK=%d",   SHT1x_CLOCK_PIN); 
     OUT(" DAT=%d\n", SHT1x_DATA_PIN); 
 
+    strcat_P(buff, PSTR("\nMCP3421     : ")); 
+    strcat_P(buff, config.sensors.en_mcp3421?PSTR("Enabled"):PSTR("Disabled"));
+    strcat_P(buff, config.config & CFG_MCP3421?PSTR(" (seen)"):PSTR(" (not found)"));
+
     // Send to correct client output 
     outputBuffer(buff, clientid);
 
@@ -398,6 +414,8 @@ void showConfig(uint16_t section, uint32_t clientid )
     OUT(" <---OK---> %d\n",   config.sensors.temp_max_warn); 
     OUT("temperature : %d",   config.sensors.hum_min_warn); 
     OUT(" <---OK---> %d\n",   config.sensors.hum_max_warn); 
+    OUT("Power       : %d",   config.sensors.pwr_min_warn); 
+    OUT(" <--<-->--> %d\n",   config.sensors.pwr_max_warn); 
  
     // Send to correct client output 
     outputBuffer(buff, clientid);
@@ -454,7 +472,7 @@ void catParam(char * dest, uint8_t maxsize, char * par1, char * par2 , char * pa
     }
   // No param, clear field
   } else {
-    strcpy(dest, "");
+    *dest = '\0';
   }
 
 }
@@ -480,13 +498,14 @@ void execCmd(char *line, uint32_t clientid)
     if ( (par1=strtok(NULL,sep)) != NULL ) {
       if ( (par2=strtok(NULL,sep)) != NULL ) {
         if ( (par3=strtok(NULL,sep)) != NULL ) {
-          par4=strtok(NULL,sep);
+          if ( (par4=strtok(NULL,sep)) != NULL ) {
+          }
         }
       }
     }
   }
 
-  Debugf(">'%s','%s','%s','%s','%s'\r\n", cmd, par1, par2, par3, par4);
+  Debugf(">'%s', 1:'%s', 2:'%s', 3:'%s', 4:'%s'\r\n", cmd, par1?par1:"null", par2?par2:"null", par3?par3:"null", par4?par4:"null");
 
   // Error ? show help
   if (!cmd || !par1) {
@@ -528,6 +547,7 @@ void execCmd(char *line, uint32_t clientid)
       }
 
     // Save command
+    //} else if(!strcasecmp(cmd, CFG_SAVE) ) {
     } else if(!strcasecmp_P(cmd, CFG_SAVE) ) {
       saveConfig();
 
@@ -635,7 +655,7 @@ void execCmd(char *line, uint32_t clientid)
         uint32_t o_msk = 0x0000; // Future bits to set
         uint32_t a_msk = 0xFFFF; // Future bits to clear
 
-        Debugf("Cmd='cfg_','%s','%s','%s'\r\n", par1, par2, par3);
+        Debugf("Cmd='cfg_','%s','%s','%s'\r\n", par1?par1:"null", par2?par2:"null", par3?par3:"null");
       
         if (par2) {
           uint8_t val = !strcasecmp(par2,"on") ? 1:0;
@@ -666,13 +686,13 @@ void execCmd(char *line, uint32_t clientid)
               config.led_hb=(val>=0&&val<=50)?val:DEFAULT_LED_HEARTBEAT;
             } else if (!strcasecmp_P(par2, &CFG_LED_GPIO[8] )) {
               config.led_gpio=(val>=0&&val<=16)?val:DEFAULT_LED_GPIO;
-              LedRGBSetup();
+              task_reconf = true;
             } else if (!strcasecmp_P(par2, &CFG_LED_NUM[8] )) {
               config.led_num=(val>=0&&val<=128)?val:DEFAULT_LED_NUM;
-              LedRGBSetup();
+              task_reconf = true;
             } else if (!strcasecmp_P(par2, &CFG_LED_TYPE[8] )) {
               config.led_type=(val>=NeoPixelType_None&&val<NeoPixelType_End)?val:DEFAULT_LED_TYPE;
-              LedRGBSetup();
+              task_reconf = true;
             }
 
           }
@@ -682,7 +702,7 @@ void execCmd(char *line, uint32_t clientid)
       } else if (!strcasecmp_P(cmd, PSTR("cnt")) ) {
         uint16_t val;
 
-        Debugf("Cmd='cnt_','%s','%s','%s'\r\n", par1, par2, par3);
+        Debugf("Cmd='cnt_','%s','%s','%s'\r\n", par1?par1:"null", par2?par2:"null", par3?par3:"null");
    
         if (par2 && par3) {
           uint8_t cnt = '0'- *par2; 
@@ -708,7 +728,7 @@ void execCmd(char *line, uint32_t clientid)
       } else if (!strcasecmp_P(cmd, PSTR("sens")) ) {
         uint16_t val;
 
-        Debugf("Cmd='sens_','%s','%s','%s','%s'\r\n", par1, par2, par3, par4);
+        Debugf("Cmd='sens_','%s','%s','%s','%s'\r\n", par1?par1:"null", par2?par2:"null", par3?par3:"null", par4?par4:"null");
    
         if (par2) {
           if (!strcasecmp(par2,"on") ) {
@@ -723,6 +743,8 @@ void execCmd(char *line, uint32_t clientid)
             config.sensors.en_si7021 = val;
           } else if (!strcasecmp_P(par1, &CFG_SENS_SHT10[5] )) {
             config.sensors.en_sht10 = val;
+          } else if (!strcasecmp_P(par1, &CFG_SENS_MCP3421[5] )) {
+            config.sensors.en_mcp3421 = val;
           } else if (!strcasecmp_P(par1, &CFG_SENS_FREQ[5] )) {
             config.sensors.freq = val;
             if ( val>0 && val<=86400 ) {
@@ -745,6 +767,11 @@ void execCmd(char *line, uint32_t clientid)
               config.sensors.hum_min_warn = min;
               config.sensors.hum_max_warn = max;
             }
+          } else if (!strcasecmp(par1, "pwr" )) {
+            if (!strcasecmp_P(par2, &CFG_SENS_PWR_LED[9] )) {
+              config.sensors.pwr_min_warn = min;
+              config.sensors.pwr_max_warn = max;
+            }
           }
         } // par3 && par4
 
@@ -764,7 +791,7 @@ Comments: -
 ====================================================================== */
 void handle_serial(char * line, uint32_t clientid)
 {
-  // received line from Web Sockets
+  // received full line from Web Sockets
   if (clientid) {
     execCmd(line, clientid);
   } else {
@@ -773,9 +800,7 @@ void handle_serial(char * line, uint32_t clientid)
     uint8_t nb_char=0;
     boolean reset_buf = false;
 
-    // We take only 8 char per loop, the other 
-    // will be taken next loop call, this avoid 
-    // long blocking while for other tasks
+    // We take only 1 char per loop
     if (Serial.available()) {
       c = Serial.read();
       nb_char++;
