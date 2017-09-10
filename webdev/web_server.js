@@ -11,6 +11,7 @@ var startTime = Date.now();
 var ws = require('websocket').server;
 var temperature=20;
 var humidity=50;
+var power=0;
 
 
 var config = {
@@ -50,10 +51,15 @@ var config = {
 "cnt_val_2":0,
 "ota_auth":"",
 "ota_port":8266,
-"sens_si7021":0,
+"sens_si7021":1,
 "sens_sht10":0,
+"sens_mcp3421":1,
+"has_si7021":0,
+"has_sht10":0,
+"has_mcp3421":1,
 "sens_hum_led":"29,66",
 "sens_temp_led":"8,58",
+"sens_pwr_led":"100,400",
 "cfg_rgb":1,
 "cfg_debug":1,
 "cfg_oled":0,
@@ -61,6 +67,7 @@ var config = {
 "cfg_wifi":1,
 "cfg_static":0,
 "cfg_led_bright":50,
+"led_panel":50,
 "cfg_led_hb":1,
 "sens_freq":300
 }
@@ -81,7 +88,12 @@ var spiffs = {
 	]
 }
 
-var wifiscan = { "wifiscan":[
+// status = -1 => Scanning
+// status = -2 => Not Started or Error
+// status >= 0 => Number of networks seen
+var wifiscan = { 
+	"status":6 ,
+	"networks":[
 	{"ssid":"FreeWifi_secure","rssi":-59,"enc":"????","chan":1},
 	{"ssid":"HOME-FREEBOX","rssi":-60,"enc":"WPA2","chan":1},
 	{"ssid":"FreeWifi","rssi":-60,"enc":"Open","chan":1},
@@ -202,9 +214,24 @@ function rHum() {
  return humidity;
 }
 
+function rPwr() { 
+	thispower = power + (rnd(-25,25)/100.0);
+ 	if ( thispower<0 ) {
+ 		thispower = 0; 
+ 	}
+	//power = (rnd(0,500) + 50)/100.0; 
+ 	//return power.toFixed(0);
+ 	return thispower.toFixed(0);;
+}
+
 function sensors() {  
-	var sensors =	{	"si7021":[ {"temperature":rTemp(),	"humidity":rHum(),	"seen":1}	],
-									 "sht10":[ {"temperature":rTemp(),	 "humidity":rHum(),	"seen":1}	]	}
+	var has_sht10 = config.has_sht10?1:-1;
+	var has_si7021= config.has_si7021?1:-1;
+	var has_mcp3421= config.has_mcp3421?1:-1;
+
+	var sensors =	{	"si7021":[ {"temperature":rTemp(),	"humidity":rHum(),	"seen":has_si7021}	],
+									 "sht10":[ {"temperature":rTemp(),	 "humidity":rHum(),	"seen":has_sht10}	],
+									 "mcp3421":[ {"power":rPwr(),	"seen":has_mcp3421}	]	}
 	return sensors;
 }
 
@@ -255,6 +282,7 @@ var wsSrv = new ws({ httpServer: server });
 wsSrv.on('request', function(request) {
 	var connection = request.accept('', request.origin);
 	console.log("+++ Websocket client connected!");
+	connection.sendUTF(JSON.stringify({message:"config", data:[{ledpanel:50}]}));
 	clearInterval(interval);
 
 	connection.on('message', function(message) {
@@ -268,15 +296,17 @@ wsSrv.on('request', function(request) {
 			// Command message
 			if ( msg.charAt(0)=='$' ) 
 			{
-				clearInterval(interval);
-
 				if (msg==='$system') {
+					clearInterval(interval);
 					interval = setInterval(function(){connection.sendUTF(JSON.stringify({message:"system", data:system()}));}, 1000);
 					connection.sendUTF(JSON.stringify({message:"system", data:system()}));
 					//connection.sendUTF('\'{message:"sensors", data:[{"na":"Uptime","va":"17"},{"na":"Board Version","va":"1.0.0"},{"na":"Compile le","va":"Jan 20 2016 18:54:14"}]}\'');
 				} else if (msg==='$sensors') {
+					clearInterval(interval);
 					interval = setInterval(function(){connection.sendUTF(JSON.stringify({message:"sensors", data:sensors()}));},value*1000);
 					connection.sendUTF(JSON.stringify({message:"sensors", data:sensors()}));
+				} else if (msg==='$lpnl') {
+					power = value*5;					
 				}
 			} else {
 				connection.sendUTF("Reveived your raw message '" + msg + "'");
