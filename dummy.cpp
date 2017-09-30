@@ -10,7 +10,7 @@ void dummy(void) {
   //for (int k = 0; k < len; k++) {
   for (int k = 0; k < 10; k++) {
     data = pgm_read_byte(dummy_string + k);
-    //Serial.print(data);
+    //DEBUG_SERIAL.print(data);
   } 	
 }
 

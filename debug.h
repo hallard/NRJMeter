@@ -22,9 +22,16 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
+#include "PString.h"
+#include <FS.h>
+
+extern char floggerbuffer[255];
+extern PString flogger;
+
 // Define here what serial to use for debug
-#define DEBUG_SERIAL	Serial
-//#define DEBUG_SERIAL	Serial1
+//#define DEBUG_SERIAL	Serial
+#define DEBUG_SERIAL	Serial1
+#define DEBUG_SERIAL1  
 
 #ifdef DEBUG_SERIAL
 
@@ -32,14 +39,14 @@
 	#define DEBUG
 
 	// debug functions
-	#define Debug(x)     	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.print(x);}
-	#define Debug2(x,y)  	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.print(x,y);}
-	#define Debugln(x)		{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.println(x);}
-	#define Debugln2(x,y)	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.println(x,y);}
-	#define DebugF(x)   	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.print(F(x));}
-	#define DebuglnF(x) 	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.println(F(x));}
-	#define Debugf(...) 	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.printf(__VA_ARGS__);}
-	#define Debugflush() 	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.flush();}
+	#define Debug(x)     	{ if (config.config & CFG_DEBUG) {DEBUG_SERIAL.print(x);} if (config.config & CFG_LOGGER) {flogger.print(x); floggerflush();} }
+	#define Debug2(x,y)  	{ if (config.config & CFG_DEBUG) {DEBUG_SERIAL.print(x,y);} if (config.config & CFG_LOGGER) {flogger.print(x,y); floggerflush();} }
+	#define Debugln(x)		{ if (config.config & CFG_DEBUG) {DEBUG_SERIAL.println(x);} if (config.config & CFG_LOGGER) {flogger.println(x); floggerflush();} }
+	#define Debugln2(x,y)	{ if (config.config & CFG_DEBUG) {DEBUG_SERIAL.println(x,y);} if (config.config & CFG_LOGGER) {flogger.println(x,y); floggerflush();} }
+	#define DebugF(x)   	{ if (config.config & CFG_DEBUG) {DEBUG_SERIAL.print(F(x));} if (config.config & CFG_LOGGER) {flogger.print(F(x)); floggerflush();} }
+	#define DebuglnF(x) 	{ if (config.config & CFG_DEBUG) {DEBUG_SERIAL.println(F(x));} if (config.config & CFG_LOGGER) {flogger.println(F(x)); floggerflush();} }
+	#define Debugf(...) 	{ if (config.config & CFG_DEBUG) {DEBUG_SERIAL.printf(__VA_ARGS__);} if (config.config & CFG_LOGGER) {flogger.printf(__VA_ARGS__); floggerflush();} }
+	#define Debugflush() 	{ if (config.config & CFG_DEBUG) {DEBUG_SERIAL.flush();} if (config.config & CFG_LOGGER) {floggerflush();} }
 #else
 	// No debug empty macros
 	#define Debug(x)    {}
@@ -50,5 +57,6 @@
 	#define Debugflush(){}
 #endif
 
+void floggerflush();
 
 #endif 

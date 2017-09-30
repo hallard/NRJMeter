@@ -1,0 +1,5 @@
+//TODO: Config Saving causing reset (server issue)
+//TODO: new file upload
+//TODO: frmw upload (spiffs / bin) with magic number
+//TODO: Make TInfo swap works (watchdog issue for now)
+//TODO: add domoticz devices for sensors

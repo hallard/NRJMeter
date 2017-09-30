@@ -45,11 +45,21 @@ extern const char FP_STATUS[];
 // Used in JSON array for bootstrap table
 extern const char FP_NA[] ;
 extern const char FP_VA[] ;
+extern const char FP_AC[] ;
+extern const char FP_CK[] ;
+extern const char FP_FL[] ;
+extern const char FP_ER[] ;
+extern const char FP_EV[] ;
+
+// Used for teleinformation
+extern const char PAPP[] ;
+extern const char IINST[] ;
 
 // Web Interface/serial configuration Form field/command names
 extern const char CFG_SAVE[]		;
 extern const char CFG_SSID[] 		;
 extern const char CFG_PSK[] 		;
+extern const char CFG_WMW[]     ;
 extern const char CFG_HOST[] 		;
 extern const char CFG_IP[] 			;
 extern const char CFG_GATEWAY[]	;
@@ -60,6 +70,8 @@ extern const char CFG_EEP_DUMP[];
 
 extern const char CFG_AP_PSK[] 		 ;
 extern const char CFG_AP_SSID[] 	 ;
+extern const char CFG_HTTP_USR[]    ;
+extern const char CFG_HTTP_PWD[]    ;
 extern const char CFG_OTA_AUTH[] 	 ;
 extern const char CFG_OTA_PORT[] 	 ;
 
@@ -82,7 +94,13 @@ extern const char CFG_DOMZ_PORT[]  ;
 extern const char CFG_DOMZ_URL[]   ;
 extern const char CFG_DOMZ_USER[]  ;
 extern const char CFG_DOMZ_PASS[]  ;
-extern const char CFG_DOMZ_INDEX[] ;
+/*extern const char CFG_DOMZ_INDEX[] ;*/
+extern const char CFG_DOMZ_IDX_TXT[] ;
+extern const char CFG_DOMZ_IDX_P1SM[] ;
+extern const char CFG_DOMZ_IDX_CRT[] ;
+extern const char CFG_DOMZ_IDX_ELEC[] ;
+extern const char CFG_DOMZ_IDX_KWH[] ;
+extern const char CFG_DOMZ_IDX_PCT[] ;
 extern const char CFG_DOMZ_FREQ[]  ;
 
 extern const char CFG_COUNT1_GPIO[]  ;
@@ -91,6 +109,10 @@ extern const char CFG_COUNT1_DELAY[] ;
 extern const char CFG_COUNT2_DELAY[] ;
 extern const char CFG_COUNT1_VALUE[] ;
 extern const char CFG_COUNT2_VALUE[] ;
+
+extern const char CFG_TINFO_EDF[] ;
+extern const char CFG_TINFO_PWR_LED[] ;
+extern const char CFG_TINFO_NRJ_LED[] ;
 
 extern const char CFG_SENS_SI7021[] 	;
 extern const char CFG_SENS_SHT10[] 		;
@@ -111,7 +133,10 @@ extern const char CFG_CFG_AP[] 			;
 extern const char CFG_CFG_WIFI[] 		;
 extern const char CFG_CFG_RGBLED[] 	;
 extern const char CFG_CFG_DEBUG[] 	;
+extern const char CFG_CFG_LOGGER[]  ;
 extern const char CFG_CFG_OLED[] 		;
+extern const char CFG_CFG_TINFO[]   ;
+extern const char CFG_CFG_DEMO[]    ;
 extern const char CFG_CFG_STATIC[]	;
 extern const char CFG_CFG_SHT10[]	  ;
 extern const char CFG_CFG_SI7021[]  ;
@@ -122,6 +147,7 @@ extern const char CFG_CFG_HASOLED[] ;
 extern const char HELP_HELP[];
 extern const char HELP_SYS[];
 extern const char HELP_WIFI[];
+extern const char HELP_TINFO[];
 extern const char HELP_DATA[];
 extern const char HELP_JEEDOM[];
 extern const char HELP_DOMZ[];

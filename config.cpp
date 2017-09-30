@@ -55,7 +55,7 @@ void outputBuffer(char * buff, uint32_t clientid)
     ws.text(clientid, buff, strlen(buff));
   else
     // Send to Serial
-    Serial.print(buff);
+    DEBUG_SERIAL.print(buff);
 }
 
 /* ======================================================================
@@ -205,7 +205,12 @@ void resetConfig(uint32_t clientid)
 
   // Set default Hostname
   sprintf_P(config.host, PSTR("NRJMeter-%c%06X"), OTA_PREFIX_ID, ESP.getChipId());
+
+  //Set OTA default port
   config.ota_port = DEFAULT_OTA_PORT ;
+
+  //Set Wifi Max Wait for Connect
+  config.wmw = CFG_DEFAULT_WMW;
   // AP SSID
   sprintf_P(config.ap_ssid, PSTR("ch2i-NRJMeter-%c%06X"), OTA_PREFIX_ID, ESP.getChipId());
 
@@ -244,6 +249,9 @@ void resetConfig(uint32_t clientid)
   config.sensors.pwr_min_warn   = CFG_SENSORS_PWR_MIN_WARN;
   config.sensors.pwr_max_warn   = CFG_SENSORS_PWR_MAX_WARN ;
   config.sensors.freq           = CFG_SENSORS_DEFAULT_FREQ ;
+
+  //TInfo
+  config.tinfo.type = CFG_TI_NONE;
 
   config.config = (CFG_RGB_LED | CFG_DEBUG | CFG_WIFI ) ;
 
@@ -293,17 +301,21 @@ void showConfig(uint16_t section, uint32_t clientid )
   #define OUT(x,y) { sprintf_P(buff+strlen(buff),PSTR(x),y); }
 
   if (section & CFG_HLP_SYS) {
-    strcat_P(buff, PSTR("Config   : ")); 
-    if(config.config&CFG_AP)      strcat_P(buff, PSTR("ACCESS_POINT "));
-    if(config.config&CFG_WIFI)    strcat_P(buff, PSTR("WIFI "));
-    if(config.config&CFG_STATIC)  strcat_P(buff, PSTR("STATIC "));
-    if(config.config&CFG_RGB_LED) strcat_P(buff, PSTR("RGBLED "));
-    if(config.config&CFG_DEBUG)   strcat_P(buff, PSTR("DEBUG "));
-    if(config.config&CFG_LCD)     strcat_P(buff, PSTR("OLED "));
+    strcat_P(buff, PSTR("")); 
+    OUT("Config (0x%04X)  : ", config.config); 
+    if(config.config&CFG_AP)          strcat_P(buff, PSTR("ACCESS_POINT "));
+    if(config.config&CFG_WIFI)        strcat_P(buff, PSTR("WIFI "));
+    if(config.config&CFG_STATIC)      strcat_P(buff, PSTR("STATIC "));
+    if(config.config&CFG_RGB_LED)     strcat_P(buff, PSTR("RGBLED "));
+    if(config.config&CFG_DEBUG)       strcat_P(buff, PSTR("DEBUG "));
+    if(config.config&CFG_LOGGER)      strcat_P(buff, PSTR("LOGGER "));
+    if(config.config&CFG_LCD)         strcat_P(buff, PSTR("OLED "));
+    if(config.config&CFG_DEMO_MODE)   strcat_P(buff, PSTR("DEMO "));
+    if(config.config&CFG_TINFO)       strcat_P(buff, PSTR("TINFO "));
 
-    if(config.config&CFG_SI7021)  strcat_P(buff, PSTR("SI7021 "));
-    if(config.config&CFG_SHT10)   strcat_P(buff, PSTR("SHT10 "));
-    if(config.config&CFG_MCP3421) strcat_P(buff, PSTR("MCP3421 "));
+    if(config.config&CFG_SI7021)      strcat_P(buff, PSTR("SI7021 "));
+    if(config.config&CFG_SHT10)       strcat_P(buff, PSTR("SHT10 "));
+    if(config.config&CFG_MCP3421)     strcat_P(buff, PSTR("MCP3421 "));
 
     const char* ledtype[] = { "None", "RGB", "GRB", "RGBW", "GRBW" };
     sprintf_P(buff+strlen(buff), PSTR("\nRGB LED  : #%d GPIO%d %s  Brigth %d %%  Heartbeat %d sec\n"), 
@@ -311,6 +323,17 @@ void showConfig(uint16_t section, uint32_t clientid )
                     ledtype[(uint8_t)config.led_type],
                     config.led_bright, config.led_hb/10); 
 
+    if (*config.http_usr) {
+      OUT("HTTP User: %s\n", config.http_usr); 
+    } else {
+      OUT("HTTP User: %s\n", "none"); 
+    }
+    if (*config.http_pwd) {
+      OUT("HTTP Password: %s\n", config.http_pwd); 
+    } else {
+      OUT("HTTP Password: %s\n", "none"); 
+    }
+    
     OUT("OTA Port : %d\nOTA Auth : ", config.ota_port); 
     if (*config.ota_auth) {
       OUT("%s\n", config.ota_auth); 
@@ -326,6 +349,7 @@ void showConfig(uint16_t section, uint32_t clientid )
     strcpy_P(buff, PSTR("\r\n===== Wifi\r\n")); 
     OUT("SSID     : %s\n", config.ssid);
     OUT("psk      : %s\n", config.psk);
+    OUT("wmw      : %d\n", config.wmw);
     OUT("host     : %s\n", config.host);
     OUT("ap SSID  : %s\n", config.ap_ssid);
     OUT("ap psk   : %s\n", config.ap_psk);
@@ -351,6 +375,16 @@ void showConfig(uint16_t section, uint32_t clientid )
     outputBuffer(buff, clientid);
   }
 
+  if (section & CFG_HLP_TINFO) {
+    strcpy_P(buff, PSTR("\r\n===== TeleInfo\n")); 
+    OUT("Type (0x%02X)  : \n", config.tinfo.type); 
+    if(config.tinfo.type == CFG_TI_NONE)       strcat_P(buff, PSTR("Disabled"));
+    if(config.tinfo.type&CFG_TI_EDF)   strcat_P(buff, PSTR("EDF Enabled"));
+
+    // Send to correct client output 
+    outputBuffer(buff, clientid);
+  }
+
   if (section & CFG_HLP_JEEDOM) {
     strcpy_P(buff, PSTR("\r\n===== Jeedom Server\n")); 
     OUT("host : %s\n", config.jeedom.host); 
@@ -371,7 +405,13 @@ void showConfig(uint16_t section, uint32_t clientid )
     OUT("url  : %s\n", config.domz.url); 
     OUT("user : %s\n", config.domz.user); 
     OUT("pass : %s\n", config.domz.pass); 
-    OUT("idx  : %d\n", config.domz.index); 
+    /*OUT("idx  : %d\n", config.domz.index); */
+    OUT("idx txt : %d\n", config.domz.idx_txt); 
+    OUT("idx p1sm : %d\n", config.domz.idx_p1sm); 
+    OUT("idx crt : %d\n", config.domz.idx_crt); 
+    OUT("idx elec : %d\n", config.domz.idx_elec); 
+    OUT("idx kwh : %d\n", config.domz.idx_kwh); 
+    OUT("idx pct : %d\n", config.domz.idx_pct); 
     OUT("freq : %d\n", config.domz.freq); 
 
     // Send to correct client output 
@@ -438,19 +478,21 @@ void showHelp(uint16_t section, uint32_t clientid)
     if (section & CFG_HLP_SYS)      ws.text(clientid, FPSTR(HELP_SYS));
     if (section & CFG_HLP_WIFI)     ws.text(clientid, FPSTR(HELP_WIFI));
     if (section & CFG_HLP_DATA)     ws.text(clientid, FPSTR(HELP_DATA));
+    if (section & CFG_HLP_TINFO)    ws.text(clientid, FPSTR(HELP_TINFO));
     if (section & CFG_HLP_JEEDOM)   ws.text(clientid, FPSTR(HELP_JEEDOM));
     if (section & CFG_HLP_DOMZ)     ws.text(clientid, FPSTR(HELP_DOMZ));
     if (section & CFG_HLP_COUNTER)  ws.text(clientid, FPSTR(HELP_COUNTER));
     if (section & CFG_HLP_SENSOR)   ws.text(clientid, FPSTR(HELP_SENSOR));
   } else {
-    Serial.print(FPSTR(HELP_HELP));
-    if (section & CFG_HLP_SYS)      Serial.print(FPSTR(HELP_SYS));
-    if (section & CFG_HLP_WIFI)     Serial.print(FPSTR(HELP_WIFI));
-    if (section & CFG_HLP_DATA)     Serial.print(FPSTR(HELP_DATA));
-    if (section & CFG_HLP_JEEDOM)   Serial.print(FPSTR(HELP_JEEDOM));
-    if (section & CFG_HLP_DOMZ)     Serial.print(FPSTR(HELP_DOMZ));
-    if (section & CFG_HLP_COUNTER)  Serial.print(FPSTR(HELP_COUNTER));
-    if (section & CFG_HLP_SENSOR)   Serial.print(FPSTR(HELP_SENSOR));
+    DEBUG_SERIAL.print(FPSTR(HELP_HELP));
+    if (section & CFG_HLP_SYS)      DEBUG_SERIAL.print(FPSTR(HELP_SYS));
+    if (section & CFG_HLP_WIFI)     DEBUG_SERIAL.print(FPSTR(HELP_WIFI));
+    if (section & CFG_HLP_DATA)     DEBUG_SERIAL.print(FPSTR(HELP_DATA));
+    if (section & CFG_HLP_TINFO)    DEBUG_SERIAL.print(FPSTR(HELP_TINFO));
+    if (section & CFG_HLP_JEEDOM)   DEBUG_SERIAL.print(FPSTR(HELP_JEEDOM));
+    if (section & CFG_HLP_DOMZ)     DEBUG_SERIAL.print(FPSTR(HELP_DOMZ));
+    if (section & CFG_HLP_COUNTER)  DEBUG_SERIAL.print(FPSTR(HELP_COUNTER));
+    if (section & CFG_HLP_SENSOR)   DEBUG_SERIAL.print(FPSTR(HELP_SENSOR));
   }
 }
 
@@ -526,6 +568,8 @@ void execCmd(char *line, uint32_t clientid)
             cfg_hlp = CFG_HLP_WIFI;
           } else if (!strcasecmp_P(par2, PSTR("data"))) {
             cfg_hlp = CFG_HLP_DATA;
+          } else if (!strcasecmp_P(par2, PSTR("tinfo"))) {
+            cfg_hlp = CFG_HLP_TINFO;
           } else if (!strcasecmp_P(par2, PSTR("sens"))) {
             cfg_hlp = CFG_HLP_SENSOR;
           } else if (!strcasecmp_P(par2, PSTR("jdom"))) {
@@ -567,6 +611,8 @@ void execCmd(char *line, uint32_t clientid)
       catParam(config.ssid, CFG_SSID_SIZE, par1, par2, par3);
     } else if (!strcasecmp_P(cmd, CFG_PSK )) {
       catParam(config.psk, CFG_PSK_SIZE, par1, par2, par3);
+    } else if (!strcasecmp_P(cmd, CFG_WMW )) {
+      config.wmw = ( atoi(par1) > 5 && atoi(par1) <60 ? atoi(par1) : CFG_DEFAULT_WMW);
     } else if (!strcasecmp_P(cmd, CFG_HOST)) {
       catParam(config.host, CFG_HOSTNAME_SIZE, par1, par2, par3);
     } else if (!strcasecmp_P(cmd, CFG_AP_PSK)) {
@@ -588,6 +634,40 @@ void execCmd(char *line, uint32_t clientid)
     if ( par2 ) {
       unsigned long v=atol(par2);
 
+      // tinfo command
+      if (!strcasecmp_P(cmd, PSTR("tinfo")) ) {
+        Debugf("Cmd='tinfo_','%s','%s'\r\n", par1, par2);
+        if (!strcasecmp_P(par1, &CFG_TINFO_EDF[6])) {
+
+          uint8_t o1_msk = 0x00; // Future bits to set
+          uint8_t a1_msk = 0xFF; // Future bits to clear
+          
+          if (!strcasecmp(par2,"on") ) {
+            o1_msk |= CFG_TI_EDF;
+          } else if (!strcasecmp(par2,"off") ) {
+            a1_msk &= ~CFG_TI_EDF;
+          }
+
+          config.tinfo.type |= o1_msk; // Set needed bits
+          config.tinfo.type &= a1_msk; // clear needed bits
+
+          uint32_t o_msk = 0x0000; // Future bits to set
+          uint32_t a_msk = 0xFFFF; // Future bits to clear
+          
+          if(!(config.tinfo.type == CFG_TI_NONE))
+          {
+            o_msk |= CFG_TINFO;
+          }
+          else
+          {
+            a_msk &= ~CFG_TINFO;
+          }
+
+          config.config |= o_msk; // Set needed bits
+          config.config &= a_msk; // clear needed bits
+        }
+      } 
+
       // ota command
       if (!strcasecmp_P(cmd, PSTR("ota")) ) {
         Debugf("Cmd='ota_','%s','%s'\r\n", par1, par2);
@@ -596,6 +676,15 @@ void execCmd(char *line, uint32_t clientid)
         } else if (!strcasecmp_P(par1, &CFG_OTA_PORT[4] )) {
           config.ota_port = (v>=0 && v<=65535) ? v : DEFAULT_OTA_PORT;
         } 
+
+      // http command
+      } else if (!strcasecmp_P(cmd, PSTR("http")) ) {
+        Debugf("Cmd='http_','%s','%s'\r\n", par1, par2);
+        if (!strcasecmp_P(par1, &CFG_HTTP_USR[5])) {
+          catParam(config.http_usr, CFG_USER_SIZE, par2, par3, par4);
+        } else if (!strcasecmp_P(par1, &CFG_HTTP_PWD[5] )) {
+          catParam(config.http_pwd, CFG_PASS_SIZE, par2, par3, par4);
+        }
 
       // emon command
       } else if (!strcasecmp_P(cmd, PSTR("emon")) ) {
@@ -638,8 +727,37 @@ void execCmd(char *line, uint32_t clientid)
           catParam(config.domz.host, CFG_DOMZ_HOST_SIZE, par2, par3, par4);
         } else if (!strcasecmp_P(par1, &CFG_DOMZ_PORT[5] )) {
           config.domz.port = (v>=0 && v<=65535) ? v : CFG_DOMZ_DEFAULT_PORT ;
-        } else if (!strcasecmp_P(par1, &CFG_DOMZ_INDEX[5] )) {
-          config.domz.index = (v>=0 && v<=65535) ? v : 0 ;
+/*        } else if (!strcasecmp_P(par1, &CFG_DOMZ_INDEX[5] )) {
+          config.domz.index = (v>=0 && v<=65535) ? v : 0 ;*/
+        } else if (!strcasecmp_P(par1, PSTR("idx") )) {
+          if(par3)
+          {
+              unsigned long i=atol(par3);
+              
+              if (!strcasecmp_P(par2, &CFG_DOMZ_IDX_TXT[9] )) {
+                config.domz.idx_txt = (i>=0 && i<=65535) ? i : 0 ;
+              }
+              else if(!strcasecmp_P(par2, &CFG_DOMZ_IDX_P1SM[9] ))
+              {
+                config.domz.idx_p1sm = (i>=0 && i<=65535) ? i : 0 ;
+              }
+              else if(!strcasecmp_P(par2, &CFG_DOMZ_IDX_CRT[9] ))
+              {
+                config.domz.idx_crt = (i>=0 && i<=65535) ? i : 0 ;
+              }
+              else if(!strcasecmp_P(par2, &CFG_DOMZ_IDX_ELEC[9] ))
+              {
+                config.domz.idx_elec = (i>=0 && i<=65535) ? i : 0 ;
+              }
+              else if(!strcasecmp_P(par2, &CFG_DOMZ_IDX_KWH[9] ))
+              {
+                config.domz.idx_kwh = (i>=0 && i<=65535) ? i : 0 ;
+              }
+              else if(!strcasecmp_P(par2, &CFG_DOMZ_IDX_PCT[9] ))
+              {
+                config.domz.idx_pct = (i>=0 && i<=65535) ? i : 0 ;
+              }
+          }
         } else if (!strcasecmp_P(par1, &CFG_DOMZ_URL[5])) {
           catParam(config.domz.url, CFG_DOMZ_URL_SIZE, par2, par3, par4);
         } else if (!strcasecmp_P(par1, &CFG_DOMZ_USER[5])) {
@@ -668,10 +786,23 @@ void execCmd(char *line, uint32_t clientid)
             if (val) o_msk |= CFG_RGB_LED; else a_msk &= ~CFG_RGB_LED;
           } else if (!strcasecmp_P(par1, &CFG_CFG_DEBUG[4] )) {
             if (val) o_msk |= CFG_DEBUG; else a_msk &= ~CFG_DEBUG;
+          } else if (!strcasecmp_P(par1, &CFG_CFG_LOGGER[4] )) {
+            if (val) o_msk |= CFG_LOGGER; else a_msk &= ~CFG_LOGGER;
+          } else if (!strcasecmp_P(par1, &CFG_CFG_DEMO[4] )) {
+            if (val) o_msk |= CFG_DEMO_MODE; else a_msk &= ~CFG_DEMO_MODE;
           } else if (!strcasecmp_P(par1, &CFG_CFG_OLED[4] )) {
             if (val) o_msk |= CFG_LCD; else a_msk &= ~CFG_LCD;
           } else if (!strcasecmp_P(par1, &CFG_CFG_STATIC[4] )) {
             if (val) o_msk |= CFG_STATIC; else a_msk &= ~CFG_STATIC;
+          }
+
+          if(!(config.tinfo.type == CFG_TI_NONE))
+          {
+            o_msk |= CFG_TINFO;
+          }
+          else
+          {
+            a_msk &= ~CFG_TINFO;
           }
 
           config.config |= o_msk; // Set needed bits
@@ -795,14 +926,15 @@ void handle_serial(char * line, uint32_t clientid)
   if (clientid) {
     execCmd(line, clientid);
   } else {
+    #ifdef SERIAL_CMD
     // Real Serial
     char c;
     uint8_t nb_char=0;
     boolean reset_buf = false;
 
     // We take only 1 char per loop
-    if (Serial.available()) {
-      c = Serial.read();
+    if (DEBUG_SERIAL.available()) {
+      c = DEBUG_SERIAL.read();
       nb_char++;
       // Space in Buffer
       if ( ser_idx < CFG_SERIAL_BUFFER_SIZE && c!='\r') {
@@ -824,5 +956,6 @@ void handle_serial(char * line, uint32_t clientid)
         memset(ser_buf, 0, sizeof(ser_buf)); // clear buffer
       }
     } // While char
+    #endif
   }
 }

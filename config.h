@@ -27,6 +27,7 @@
 
 #define CFG_SSID_SIZE 		32
 #define CFG_PSK_SIZE  		64
+#define CFG_DEFAULT_WMW   10
 #define CFG_HOSTNAME_SIZE 16
 #define CFG_USER_SIZE     16
 #define CFG_PASS_SIZE     16
@@ -56,7 +57,7 @@
 #define CFG_DOMZ_URL_SIZE     64
 #define CFG_DOMZ_DEFAULT_PORT 80
 #define CFG_DOMZ_DEFAULT_HOST "domoticz.local"
-#define CFG_DOMZ_DEFAULT_URL  "/json.htm?type=command&param=udevice&nvalue=0"
+#define CFG_DOMZ_DEFAULT_URL  "/json.htm" //"/json.htm?type=command&param=udevice&nvalue=0"
 
 // Counters default debounce = 10ms
 #define CFG_COUNTER_DEFAULT_DELAY 10
@@ -90,9 +91,20 @@
 #define CFG_MCP3421     0x0040  // MCP3421 seen
 #define CFG_MCP4725     0x0080  // MCP4725 seen
 #define CFG_HASOLED     0x0100  // I2C OLED seen
+#define CFG_TINFO       0x0200  // Enable TInfo (any type: edf, dsm, ...)
+#define CFG_DEMO_MODE   0x0400  // Demo Mode
+#define CFG_LOGGER      0x0800  // Enable Debug to be printed to log.txt on SPIFFS
+#define CFG_FILLER3     0x1000  // Filler3
 #define CFG_STATIC      0x2000  // Enable Static IP
 #define CFG_WIFI        0x4000  // Enable Wifi
 #define CFG_BAD_CRC     0x8000  // Bad CRC when reading configuration
+
+//Bit definition for different tinfo modes
+#define CFG_TI_NONE      0x00 //No TInfo
+#define CFG_TI_EDF       0x01 //EDF Teleinfo
+#define CFG_TI_FILLER1   0x02 //Just in case we manage other Tinfo types (Deutch Smart Meter?)
+#define CFG_TI_FILLER2   0x04 //Just in case we manage other Tinfo types
+#define CFG_TI_FILLER3   0x08 //Just in case we manage other Tinfo types
 
 // Show config and help sections
 #define CFG_HLP_ALL     0xFFFF
@@ -104,6 +116,7 @@
 #define CFG_HLP_JEEDOM  0x0010
 #define CFG_HLP_DOMZ    0x0020
 #define CFG_HLP_COUNTER 0x0040
+#define CFG_HLP_TINFO   0x0080
 
 #define CFG_SERIAL_BUFFER_SIZE 128
 
@@ -156,7 +169,7 @@ typedef struct
   uint8_t filler[10];                   // in case adding data in config avoiding loosing current conf by bad crc*/
 } _jeedom;
 
-// Config for domtoticz
+// Config for domoticz
 // 160 Bytes
 typedef struct 
 {
@@ -165,9 +178,15 @@ typedef struct
   char  pass[CFG_PASS_SIZE+1];          // password
   char  url[CFG_DOMZ_URL_SIZE+1];       // Post URL
   uint32_t freq;                        // refresh rate
-  uint16_t index;                       // DomoticZ device index
+  /*uint16_t index;*/                       // Index
+  uint16_t idx_txt;                     // Index device domoticz Text (2 Byte)
+  uint16_t idx_p1sm;                    // Index device domoticz P1 Smart Meter (2 Bytes)
+  uint16_t idx_crt;                     // Index device domoticz Current (2 Bytes)
+  uint16_t idx_elec;                    // Index device domoticz Eletric (2 Byte)
+  uint16_t idx_kwh;                     // Index device domoticz Kwh (2 Byte)
+  uint16_t idx_pct;                     // Index device domoticz Percentage (2 Byte)
   uint16_t port;                        // Protocol port (HTTP/HTTPS)
-  uint8_t filler[20];                   // in case adding data in config avoiding loosing current conf by bad crc*/
+  uint8_t filler[10];                   // in case adding data in config avoiding loosing current conf by bad crc*/
 } _domoticz;
 
 
@@ -181,39 +200,51 @@ typedef struct
   uint16_t delay2;        // Counter 2 delay (debounce time) in ms
   uint8_t  gpio1;         // Counter 1 gpio pin number
   uint8_t  gpio2;         // Counter 2 gpio pin number
-  uint8_t filler[18];                   // in case adding data in config avoiding loosing current conf by bad crc*/
+  uint8_t filler[18];     // in case adding data in config avoiding loosing current conf by bad crc*/
 } _counter;
+
+// Config for tinfo
+// 16 Bytes
+typedef struct
+{
+  uint8_t type;                   // TInfo type (EDF, ... maybe others to come) eg: Deutch Smart Meter (https://www.wijhebbenzon.nl/media/kunena/attachments/3055/DSMRv5.0FinalP1.pdf + https://www.domoticz.com/forum/viewtopic.php?t=4970)
+  uint8_t filler[15];             // in case adding data in config avoiding loosing current conf by bad crc*/
+} _tinfo;
 
 // Config saved into eeprom
 // 2048 bytes total including CRC
 typedef struct 
 {
-  char  ssid[CFG_SSID_SIZE+1]; 		 // SSID     
-  char  psk[CFG_PSK_SIZE+1]; 		   // Pre shared key
-  char  host[CFG_HOSTNAME_SIZE+1]; // Hostname 
-  char  ap_psk[CFG_PSK_SIZE+1];    // Access Point Pre shared key
-  char  ap_ssid[CFG_SSID_SIZE+1];  // Access Point SSID name
-  char  ota_auth[CFG_PSK_SIZE+1];  // OTA Authentication password
-  uint32_t config;           		   // Bit field register 
-  uint16_t ota_port;         		   // OTA port 
-  uint8_t led_bright;              // RGB Led brigthness
-  uint8_t led_hb;                  // RGB Led HeartBeat
-  uint8_t led_type;                // RGB Led type
-  uint8_t led_num;                 // # of RGB LED
-  uint8_t led_gpio;                // GPIO driving RGBLED
-  uint32_t ip;                     // Static Wifi IP Address
-  uint32_t mask;                   // Static Wifi NetMask
-  uint32_t gw;                     // Static Wifi Gateway Address
-  uint32_t dns;                    // Static Wifi DNS server Address
-  uint8_t  led_panel;              // LED Panel brigthness
-  uint8_t  filler[76];      		   // in case adding data in config avoiding loosing current conf by bad crc
-  _emoncms emoncms;                // Emoncms configuration
-  _sensors sensors;                // Sensors configuration
-  _jeedom  jeedom;                 // JeeDom configuration
-  _domoticz domz;                  // Domoticz configuration
-  _counter counter;                // Counter configuration
-  uint8_t  filler1[1056];          // Another filler in case we need more
-  uint16_t crc;
+  char  ssid[CFG_SSID_SIZE+1]; 		 // SSID (33 Bytes)
+  char  psk[CFG_PSK_SIZE+1]; 		   // Pre shared key (65 Bytes) 
+  char  host[CFG_HOSTNAME_SIZE+1]; // Hostname (17 Bytes)
+  char  ap_psk[CFG_PSK_SIZE+1];    // Access Point Pre shared key (65 Bytes)
+  char  ap_ssid[CFG_SSID_SIZE+1];  // Access Point SSID name (33 Bytes)
+  char  http_usr[CFG_USER_SIZE+1]; // HTTP Authentication user (17 Bytes)
+  char  http_pwd[CFG_PASS_SIZE+1]; // HTTP Authentication user (17 Bytes)
+  char  ota_auth[CFG_PSK_SIZE+1];  // OTA Authentication password (65 Bytes)
+  uint32_t config;           		   // Bit field register  (4 Bytes)
+  uint16_t ota_port;         		   // OTA port  (2 Bytes)
+  uint8_t led_bright;              // RGB Led brigthness (1 Bytes)
+  uint8_t led_hb;                  // RGB Led HeartBeat (1 Bytes)
+  uint8_t led_type;                // RGB Led type (1 Bytes)
+  uint8_t led_num;                 // # of RGB LED (1 Bytes)
+  uint8_t led_gpio;                // GPIO driving RGBLED (1 Bytes)
+  uint32_t ip;                     // Static Wifi IP Address (4 Bytes)
+  uint32_t mask;                   // Static Wifi NetMask (4 Bytes)
+  uint32_t gw;                     // Static Wifi Gateway Address (4 Bytes)
+  uint32_t dns;                    // Static Wifi DNS server Address (4 Bytes)
+  uint8_t  led_panel;              // LED Panel brigthness (1 Bytes)
+  uint8_t wmw;                     // Wifi connect max wait in seconds (1 Bytes)
+  uint8_t  filler[41];      		   // in case adding data in config avoiding loosing current conf by bad crc (41 Bytes)
+  _emoncms emoncms;                // Emoncms configuration (128 Bytes)
+  _sensors sensors;                // Sensors configuration (128 Bytes)
+  _jeedom  jeedom;                 // JeeDom configuration (160 Bytes)
+  _domoticz domz;                  // Domoticz configuration (160 Bytes)
+  _counter counter;                // Counter configuration (32 Bytes)
+  _tinfo tinfo;                    // TInfo configuration (16 Bytes)
+  uint8_t  filler1[1040];          // Another filler in case we need more (1040 Bytes)
+  uint16_t crc;                    // CRC (2 Bytes)
 } _Config;
 
 

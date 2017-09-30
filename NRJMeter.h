@@ -65,7 +65,7 @@ extern "C" {
   #define OTA_PREFIX_ID   'E'
 #endif
 
-#define NRJMETER_VERSION_MAJOR 1
+#define NRJMETER_VERSION_MAJOR 2
 #define NRJMETER_VERSION_MINOR 0
 
 // Maximum time when we fire a reset with no refresh (in sec)
@@ -74,7 +74,7 @@ extern "C" {
 // Maximum time when wifi is allowed to setup config (in sec)
 #define MAX_WIFI_SEC	300
 
-// Maximum number of simultaned clients connected (WebSocket)
+// Maximum number of simultaneous clients connected (WebSocket)
 #define MAX_WS_CLIENT	5
 
 #define BLINK_LED_MS   100 // ms blink
@@ -110,6 +110,8 @@ extern "C" {
 #define CLIENT_CONFIG		3
 #define CLIENT_SPIFFS		4
 #define CLIENT_LOG			5
+#define CLIENT_TINFO    6
+#define CLIENT_LOGGER   7
 
 // Light off the RGB LED
 #ifndef RGB_LED_PIN
@@ -117,12 +119,15 @@ extern "C" {
 #define LedRGBON(x)  {}
 #else
 //#define LedRGBOFF() { rgb_led.SetPixelColor(0,0,0,0); rgb_led.Show(); }
-//void LedRGBON(uint8_t hue );
+void LedRGBOFF(void);
+void LedRGBON(uint16_t hue );
 //void LedRGBON (uint8_t r, uint8_t g, uint8_t b);
 #endif
 
 
 // output  functions
+/* Done un debug.h
+#ifdef DEBUG_SERIAL
 #define Debug(x)     	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.print(x);}
 #define Debug2(x,y)  	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.print(x,y);}
 #define Debugln(x)		{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.println(x);}
@@ -130,7 +135,16 @@ extern "C" {
 #define DebugF(x)   	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.print(F(x));}
 #define DebuglnF(x) 	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.println(F(x));}
 #define Debugf(...) 	{ if (config.config & CFG_DEBUG) DEBUG_SERIAL.printf(__VA_ARGS__);}
-
+#else
+#define Debug(x)       
+#define Debug2(x,y)   
+#define Debugln(x)    
+#define Debugln2(x,y) 
+#define DebugF(x)     
+#define DebuglnF(x)   
+#define Debugf(...)   
+#endif
+*/
 
 // Exported variables/object instancied in main sketch
 // ===================================================

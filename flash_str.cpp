@@ -41,12 +41,21 @@ const char FP_STATUS[]      PROGMEM = "status";
 // Used in JSON array for bootstrap table
 const char FP_NA[] PROGMEM = "na";
 const char FP_VA[] PROGMEM = "va";
+const char FP_AC[] PROGMEM = "ac";
+const char FP_CK[] PROGMEM = "ck";
+const char FP_FL[] PROGMEM = "fl";
+const char FP_ER[] PROGMEM = "er";
+const char FP_EV[] PROGMEM = "ev";
 
+// Used for teleinformation
+const char PAPP[]  PROGMEM = "PAPP";
+const char IINST[] PROGMEM = "IINST";
 
 // Web Interface/serial configuration Form field/command names
 const char CFG_SAVE[] 		PROGMEM = "save";
 const char CFG_SSID[] 		PROGMEM = "ssid";
 const char CFG_PSK[] 			PROGMEM = "psk";
+const char CFG_WMW[]      PROGMEM = "wmw";
 const char CFG_HOST[] 		PROGMEM = "host";
 const char CFG_IP[] 			PROGMEM = "ip";
 const char CFG_GATEWAY[]	PROGMEM = "gw";
@@ -54,6 +63,8 @@ const char CFG_MASK[]			PROGMEM = "mask";
 const char CFG_DNS[]			PROGMEM = "dns";
 const char CFG_AP_PSK[] 	PROGMEM = "appsk";
 const char CFG_AP_SSID[] 	PROGMEM = "apssid";
+const char CFG_HTTP_USR[] PROGMEM = "http_usr";
+const char CFG_HTTP_PWD[] PROGMEM = "http_pwd";
 const char CFG_OTA_AUTH[] PROGMEM = "ota_auth";
 const char CFG_OTA_PORT[] PROGMEM = "ota_port";
 const char CFG_EEP_DUMP[]	PROGMEM = "eep_dump";
@@ -77,8 +88,14 @@ const char CFG_DOMZ_PORT[] PROGMEM  = "domz_port";
 const char CFG_DOMZ_URL[]  PROGMEM  = "domz_url";
 const char CFG_DOMZ_USER[]  PROGMEM = "domz_user";
 const char CFG_DOMZ_PASS[]  PROGMEM = "domz_pass";
-const char CFG_DOMZ_INDEX[] PROGMEM = "domz_idx";
-const char CFG_DOMZ_FREQ[] PROGMEM  = "domz_freq";
+/*const char CFG_DOMZ_INDEX[] PROGMEM = "domz_idx";*/
+const char CFG_DOMZ_IDX_TXT[]  PROGMEM = "domz_idx_txt";
+const char CFG_DOMZ_IDX_P1SM[] PROGMEM = "domz_idx_p1sm";
+const char CFG_DOMZ_IDX_CRT[]  PROGMEM = "domz_idx_crt";
+const char CFG_DOMZ_IDX_ELEC[] PROGMEM = "domz_idx_elec";
+const char CFG_DOMZ_IDX_KWH[]  PROGMEM = "domz_idx_kwh";
+const char CFG_DOMZ_IDX_PCT[]  PROGMEM = "domz_idx_pct";
+const char CFG_DOMZ_FREQ[]     PROGMEM  = "domz_freq";
 
 const char CFG_COUNT1_GPIO[]  PROGMEM = "cnt_io_1";
 const char CFG_COUNT2_GPIO[]  PROGMEM = "cnt_io_2";
@@ -86,6 +103,10 @@ const char CFG_COUNT1_DELAY[] PROGMEM = "cnt_dly_1";
 const char CFG_COUNT2_DELAY[] PROGMEM = "cnt_dly_2";
 const char CFG_COUNT1_VALUE[] PROGMEM = "cnt_val_1";
 const char CFG_COUNT2_VALUE[] PROGMEM = "cnt_val_2";
+
+const char CFG_TINFO_EDF[]       PROGMEM = "tinfo_edf";
+const char CFG_TINFO_PWR_LED[]   PROGMEM = "tinfo_pwr_led";
+const char CFG_TINFO_NRJ_LED[]   PROGMEM = "tinfo_nrj_led";
 
 const char CFG_SENS_SI7021[] 		PROGMEM = "sens_si7021";
 const char CFG_SENS_SHT10[] 		PROGMEM = "sens_sht10";
@@ -105,22 +126,27 @@ const char CFG_CFG_AP[] 		PROGMEM = "cfg_ap";
 const char CFG_CFG_WIFI[] 	PROGMEM = "cfg_wifi";
 const char CFG_CFG_RGBLED[] PROGMEM = "cfg_rgb";
 const char CFG_CFG_DEBUG[] 	PROGMEM = "cfg_debug";
+const char CFG_CFG_LOGGER[] PROGMEM = "cfg_logger";
 const char CFG_CFG_OLED[] 	PROGMEM = "cfg_oled";
+const char CFG_CFG_TINFO[]  PROGMEM = "cfg_tinfo";
+const char CFG_CFG_DEMO[]   PROGMEM = "cfg_demo";
 const char CFG_CFG_STATIC[]	PROGMEM = "cfg_static";
 const char CFG_CFG_SHT10[]	PROGMEM = "has_sht10";
 const char CFG_CFG_SI7021[]	PROGMEM = "has_si7021";
 const char CFG_CFG_MCP3421[]PROGMEM = "has_mcp3421";
 const char CFG_CFG_HASOLED[]PROGMEM = "has_oled";
 
+
 const char HELP_HELP[] PROGMEM = "\r\n===== Help\r\n"
-	    "show help [sys|wifi|data|sens|jdom|domz|cnt]   : show full help or section\r\n"
-	 		"show config [sys|wifi|data|sens|jdom|domz|cnt] : show full config or section\r\n";
+	    "show help [sys|wifi|data|tinfo|sens|jdom|domz|cnt]   : show full help or section\r\n"
+	 		"show config [sys|wifi|data|tinfo|sens|jdom|domz|cnt] : show full config or section\r\n";
 
 const char HELP_SYS[] PROGMEM  = "\r\n===== Config\r\n" 
 	    "cfg ap  on|off    : Enable/Disable to be access point mode on or off\r\n"
 	    "cfg wifi on|off   : Enable/Disable Wifi on or off\r\n"
 	    "cfg rgb on|off    : Enable/Disable rgb led\r\n"
 	    "cfg debug on|off  : Enable/Disable debug\r\n"
+      "cfg demo on|off   : Enable/Disable demo data mode\r\n"
 	    "cfg oled on|off   : Enable/Disable display\r\n"
 
 	    "cfg led bright p  : Set RGB led brightness to p percent (0 to 100)\r\n"
@@ -129,6 +155,8 @@ const char HELP_SYS[] PROGMEM  = "\r\n===== Config\r\n"
 	    "cfg led gpio n    : Set gpio port used to drive RGB LED\r\n"
 	    "cfg led type x    : Set RGB LED type (0=None, 1=RGB, 2=GRB, 3=RGBW, 4=GRBW\r\n"
 
+      "http usr login    : Set HTTP Authentication User to login\r\n" 
+      "http pwd password : Set HTTP Authentication Password to password\r\n" 
 	    "ota auth authkey  : Set OTA Authentication to authkey\r\n" 
 	    "ota port          : Set OTA TCP Port\r\n" 
 	    "save config       : save current configuration\r\n"
@@ -145,6 +173,7 @@ const char HELP_SYS[] PROGMEM  = "\r\n===== Config\r\n"
 const char HELP_WIFI[] PROGMEM  = "\r\n===== Wifi\r\n" 
 	    "ssid name         : Set SSID name\r\n"
 	    "psk pass          : Set Key/Password\r\n"
+      "wmw 10            : Set Wifi Max Wait Connect Time in seconds\r\n"
 	    "host name         : Set device Hostname\r\n" 
 	    "apssid name       : Set device Access Point SSID name\r\n" 
 	    "appsk psk         : Set device Access Point Key/password\r\n" 
@@ -205,6 +234,11 @@ const char HELP_COUNTER[] PROGMEM  = "\r\n===== Counter Index (1 or 2 only)\r\n"
 	    "  cnt io 1 14     => Associate counter 1 to gpio14\r\n" 
 	    "  cnt dly 2 50    => Set counter 2 debounce time to 50ms\r\n" 
 	    "  cnt val 1 1234  => Set counter 1 to value 1234\r\n" ;
+
+const char HELP_TINFO[] PROGMEM  = "\r\n===== TeleInfo\r\n" 
+      "tinfo edf on|off   : Set EDF TeleInfo\r\n" 
+      "-- Examples\r\n" 
+      "  tinfo edf on    => Enable EDF TeleInfo\r\n";
 
 const char HELP_SENSOR[] PROGMEM = 	"\r\n===== Sensors\r\n" 
 	    "sens si7021 on|off : Enable/Disable SI7021 internal sensor\r\n" 

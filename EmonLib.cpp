@@ -299,16 +299,18 @@ double EnergyMonitor::calcIrms(unsigned int Number_of_Samples)
 
 void EnergyMonitor::serialprint()
 {
-  Serial.print(realPower);
-  Serial.print(' ');
-  Serial.print(apparentPower);
-  Serial.print(' ');
-  Serial.print(Vrms);
-  Serial.print(' ');
-  Serial.print(Irms);
-  Serial.print(' ');
-  Serial.print(powerFactor);
-  Serial.println(' ');
+  #ifdef DEBUG_SERIAL
+  DEBUG_SERIAL.print(realPower);
+  DEBUG_SERIAL.print(' ');
+  DEBUG_SERIAL.print(apparentPower);
+  DEBUG_SERIAL.print(' ');
+  DEBUG_SERIAL.print(Vrms);
+  DEBUG_SERIAL.print(' ');
+  DEBUG_SERIAL.print(Irms);
+  DEBUG_SERIAL.print(' ');
+  DEBUG_SERIAL.print(powerFactor);
+  DEBUG_SERIAL.println(' ');
+  #endif
   delay(100);
 }
 

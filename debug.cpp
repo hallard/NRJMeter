@@ -22,3 +22,39 @@
 
 #include "debug.h"
 
+char floggerbuffer[255];
+PString flogger(floggerbuffer, sizeof(floggerbuffer));
+
+void floggerflush()
+{
+  if(SPIFFS.begin())
+  {
+
+   //check max size & switch file if needed
+  File fr = SPIFFS.open("/log.txt", "r");
+  if(fr)
+  {
+    if (fr.size() >= 10000)
+      {
+        fr.close();
+        if (SPIFFS.exists("/log.1.txt"))
+        {
+          SPIFFS.remove("/log.1.txt");
+        }
+        SPIFFS.rename("/log.txt","/log.1.txt");
+      }
+      else
+      {
+        fr.close();
+      }
+  }
+   
+   // open file for writing
+  File f = SPIFFS.open("/log.txt", "a+");
+  if (f) {
+      f.print(floggerbuffer);
+      flogger.begin();
+  }
+  f.close();
+  }
+}

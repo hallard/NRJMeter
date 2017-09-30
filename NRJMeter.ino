@@ -15,6 +15,7 @@
 // Written by Charles-Henri Hallard (http://hallard.me)
 //
 // History : V1.00 2015-06-14 - First release
+//           V2.00 2017-09-24 - Merged Tinfo (Formerly WifInfo 1.02) - Sylvain REMY
 //
 // All text above must be included in any redistribution.
 //
@@ -36,7 +37,7 @@
 #include <Wire.h>
 #include <NeoPixelBus.h>
 #include <NeoPixelAnimator.h>
-#include <LibTeleinfo.h>
+//#include <LibTeleinfo.h>
 #include <FS.h>
 #include <Ticker.h>
 
@@ -44,6 +45,7 @@
 
 // Global project file
 #include "NRJMeter.h"
+#include "TInfo.h"
 //#include "debug.h"
 
 // Watchdog
@@ -443,10 +445,11 @@ int WifiConnect(boolean with_timeout)
 
       if (with_timeout) {
         unsigned long my_start = millis();
-        wifi_connect_time = my_start;
+        wifi_connect_time = 0;
 
         //delay(100);
-        while ( ( ret = WiFi.status() )!=WL_CONNECTED &&  wifi_connect_time<10000 ) {
+        while ( ( ret = WiFi.status() )!=WL_CONNECTED &&  wifi_connect_time< 1000 * config.wmw ) {
+          
           #ifdef RGB_LED_PIN
           LedRGBON(326);
           LedRGBAnimate(RGB_ANIM_CYCLON, 750);
@@ -702,6 +705,10 @@ void setup()
     system_update_cpu_freq(160);
   #endif
 
+  // Setup call watchdog supervision each WDT Reset time / 3
+  wdt_loop = millis();
+  wdt_ticker.attach_ms(((WDT_RESET_TIME / 3) * 1000), wdt_check);
+
   //WiFi.disconnect(false);
 
   // Set WiFi to station mode and disconnect from an AP if it was previously connected
@@ -726,12 +733,14 @@ void setup()
   EEPROM.begin(sizeof(_Config));
   //EEPROM.begin(2048);
 
-  DebugF("Config size="); Debug(sizeof(_Config));
-  DebugF(" (emoncms=");   Debug(sizeof(_emoncms));
-  DebugF("  sensors=");   Debug(sizeof(_sensors));
-  DebugF("  jeedom=");    Debug(sizeof(_jeedom));
-  DebugF("  domoticz=");  Debug(sizeof(_domoticz));
-  DebugF("  counter=");   Debug(sizeof(_counter));
+  DebugF("Config size=");         Debug(sizeof(_Config));
+  DebugF(" (config internal=");   Debug(sizeof(_Config) - (sizeof(_emoncms) + sizeof(_sensors) + sizeof(_jeedom) + sizeof(_domoticz) + sizeof(_counter) + sizeof(_tinfo)));
+  DebugF("  emoncms=");           Debug(sizeof(_emoncms));
+  DebugF("  sensors=");           Debug(sizeof(_sensors));
+  DebugF("  jeedom=");            Debug(sizeof(_jeedom));
+  DebugF("  domoticz=");          Debug(sizeof(_domoticz));
+  DebugF("  counter=");           Debug(sizeof(_counter));
+  DebugF("  tinfo=");             Debug(sizeof(_tinfo));
   #ifdef ARDUINOJSON_ENABLE_ALIGNMENT 
     Debugln(") Aligned");
   #else
@@ -779,6 +788,14 @@ void setup()
   // start Wifi connect or soft AP
   WifiHandleConn(true);
 
+  //start Wifi scan Networks so that 1st Web scan return results
+  WiFi.scanNetworks(true); //https://github.com/me-no-dev/ESPAsyncWebServer/issues/85
+
+  yield();
+  
+  // start Teleinformation
+  TInfo_setup();
+
   // Setup Web server and WenSockets
   WS_setup();
 
@@ -798,10 +815,6 @@ void setup()
 
   // start 1st 
   //heartbeat = config.led_hb;
-
-  // Setup call watchdog supervision each WDT Reset time / 3
-  wdt_loop = millis();
-  wdt_ticker.attach_ms(((WDT_RESET_TIME / 3) * 1000), wdt_check);
 
   // Emoncms first sent
   if (config.emoncms.freq) {
@@ -897,12 +910,16 @@ void loop()
   // Do all related Serial stuff
   handle_serial();
 
-  // Only once task per loop, let system do it own task
+  // Do all related TInfo stuff
+  handle_tinfo();
+
+  // Only once task per loop, let system do its own task
   if (task_1_sec) { 
     //Debugf("[%5ld][0x%04X]...", seconds, config.config);
     task_1_sec = false; 
     si7021_last_seen++;
     sht1x_last_seen++;
+    tinfo_last_seen++;
 
     if (config.config&CFG_WIFI) {
 
@@ -920,20 +937,36 @@ void loop()
             Debugf("%d ws[%u][%u] sending: %s\n", system_get_free_heap_size(), ws_client[index].id, index, response.c_str());    
             // send message to this connected client
             ws.text(ws_client[index].id, response.c_str());
-
-          } else if (state == CLIENT_SENSORS)  {
+          } else if (state == CLIENT_LOGGER) {
+            String response = "{message:\"logger\", data:";
+            response += logJSONTable(NULL);
+            response += "}";
+            //Reset Client state, we send log once to avoid infinite loop
+            ws_client[index].state = CLIENT_NONE;
+            Debugf("ws[%u][%u] sending %s\n", ws_client[index].id, index, response.c_str()); 
+            // send message to this connected client
+            ws.text(ws_client[index].id, response.c_str());
+          } else if (state == CLIENT_SENSORS || state == CLIENT_TINFO)  {
 
             // Increment ticks counter
             ws_client[index].tick++;
 
             // Time to send data (tick ellapsed?
             if (ws_client[index].tick >= ws_client[index].refresh) {
-              String response = "{message:\"sensors\", data:";
-              response += sensorsJSONTable(NULL);
-              response += "}";
-              ws_client[index].tick=0;
-              Debugf("ws[%u][%u] sending %s\n", ws_client[index].id, index, response.c_str());    
 
+              String response;
+              if (state == CLIENT_SENSORS) {
+                  response = "{message:\"sensors\", data:";
+                  response += sensorsJSONTable(NULL);
+                  response += "}";
+              } else if (state == CLIENT_TINFO) {
+                  response = "{message:\"tinfo\", data:";
+                  response += tinfoJSONTable(NULL);
+                  response += "}";
+              }
+
+              ws_client[index].tick=0;
+              Debugf("ws[%u][%u] sending %s\n", ws_client[index].id, index, response.c_str());  
               // send message to this connected client
               ws.text(ws_client[index].id, response.c_str());
             }

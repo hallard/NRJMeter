@@ -22,6 +22,11 @@
 
 #include "webclient.h"
 
+#include <map>
+#include <string>
+
+#include "TInfo.h"
+
 /* ======================================================================
 Function: httpPost
 Purpose : Do a http post
@@ -129,17 +134,198 @@ Comments: -
 ====================================================================== */
 boolean domoticzPost(void)
 {
-  boolean ret = false;
-  char buff[128];
+  boolean ret = true;
 
-  // Some basic checking
+    // Some basic checking
   if (*config.domz.host) {
-    String url ; 
-    struct rst_info * p = ESP.getResetInfoPtr();
+    ValueList * me = tinfo.getList();
+    std::map<std::string, std::string>  meMap;
 
-    url = *config.domz.url ? config.domz.url : "/";
-  } // if host
+    String baseurl;
+    String url;
+    baseurl = *config.domz.url ? config.domz.url : "/";
+    baseurl += F("?type=command&param=udevice&");
+          
+    // Got at least one ?
+    if (me && me->next) {
+      // Loop thru the node
+      while (me->next) {
+        // go to next node
+        me = me->next;
+        // Si Item virtuel, on le met pas
+        if (*me->name =='_')
+        {
+          //Nothing
+        }
+        else
+        {
+          meMap[me->name] = me->value;
+        }
+        
+      } // While me
+          
+      // /json.htm?type=command&param=udevice&idx=IDX&nvalue=0&svalue=TXT
+      if(config.domz.idx_txt > 0)
+      {
+          url = baseurl;
+          url += "idx=";
+          url += config.domz.idx_txt;
+          url += "&nvalue=0";
+          url += "&svalue=";
+          url += meMap["ADCO"].c_str();
 
+          if(!httpPost( config.domz.host, config.domz.port, (char *) url.c_str()))
+          {
+            ret = false;
+          }
+          
+          /*
+          Info(config.domz.host);
+          InfoF(":");
+          Info(config.domz.port);
+          Infoln((char *) url.c_str());
+          InfoF("ret=");
+          Infoln(ret);
+          Infoflush();
+          */
+      }
+
+      // /json.htm?type=command&param=udevice&idx=IDX&nvalue=0&svalue=USAGE1;USAGE2;RETURN1;RETURN2;CONS;PROD
+      if(config.domz.idx_p1sm > 0)
+      {
+          url = baseurl;
+          url += "idx=";
+          url += config.domz.idx_p1sm;
+          url += "&nvalue=0";
+          url += "&svalue=";
+          url += String(atoi(meMap["BASE"].c_str())).c_str();
+          url += ";0;0;0;";
+          url += String(atoi(meMap["PAPP"].c_str())).c_str();
+          url += ";0";
+
+          if(!httpPost( config.domz.host, config.domz.port, (char *) url.c_str()))
+          {
+            ret = false;
+          }
+
+          /*
+          Info(config.domz.host);
+          InfoF(":");
+          Info(config.domz.port);
+          Infoln((char *) url.c_str());
+          InfoF("ret=");
+          Infoln(ret);
+          Infoflush();
+          */
+      }
+      
+      // /json.htm?type=command&param=udevice&idx=IDX&nvalue=0&svalue=ENERGY
+      if(config.domz.idx_crt > 0)
+      {
+          url = baseurl;
+          url += "idx=";
+          url += config.domz.idx_crt;
+          url += "&nvalue=0";
+          url += "&svalue=";
+          url += String(atoi(meMap["IINST"].c_str())).c_str();
+
+          if(!httpPost( config.domz.host, config.domz.port, (char *) url.c_str()))
+          {
+            ret = false;
+          }
+
+          /*
+          Info(config.domz.host);
+          InfoF(":");
+          Info(config.domz.port);
+          Infoln((char *) url.c_str());
+          InfoF("ret=");
+          Infoln(ret);
+          Infoflush();
+          */
+      }
+
+      // /json.htm?type=command&param=udevice&idx=IDX&nvalue=0&svalue=ENERGY
+      if(config.domz.idx_elec > 0)
+      {
+          url = baseurl;
+          url += "idx=";
+          url += config.domz.idx_elec;
+          url += "&nvalue=0";
+          url += "&svalue=";
+          url += String(atoi(meMap["PAPP"].c_str())).c_str();
+
+          if(!httpPost( config.domz.host, config.domz.port, (char *) url.c_str()))
+          {
+            ret = false;
+          }
+
+          /*
+          Info(config.domz.host);
+          InfoF(":");
+          Info(config.domz.port);
+          Infoln((char *) url.c_str());
+          InfoF("ret=");
+          Infoln(ret);
+          Infoflush();
+          */
+      }
+
+      // /json.htm?type=command&param=udevice&idx=IDX&nvalue=0&svalue=POWER,ENERGY
+      if(config.domz.idx_kwh > 0)
+      {
+          url = baseurl;
+          url += "idx=";
+          url += config.domz.idx_kwh;
+          url += "&nvalue=0";
+          url += "&svalue=";
+          url += String(atoi(meMap["PAPP"].c_str())).c_str();
+          url += ";0";
+          //url += String(atoi(meMap["IINST"].c_str())).c_str(); Computed by Domoticz
+
+          if(!httpPost( config.domz.host, config.domz.port, (char *) url.c_str()))
+          {
+            ret = false;
+          }
+
+          /*
+          Info(config.domz.host);
+          InfoF(":");
+          Info(config.domz.port);
+          Infoln((char *) url.c_str());
+          InfoF("ret=");
+          Infoln(ret);
+          Infoflush();
+          */
+      }
+      // /json.htm?type=command&param=udevice&idx=IDX&nvalue=0&svalue=PERCENTAGE
+      if(config.domz.idx_pct > 0)
+      {
+          url = baseurl;
+          url += "idx=";
+          url += config.domz.idx_pct;
+          url += "&nvalue=0";
+          url += "&svalue=";
+          url += String( roundf((atof(meMap["IINST"].c_str())* 100) / atof(meMap["ISOUSC"].c_str()) * 100) / 100 ).c_str();
+
+          if(!httpPost( config.domz.host, config.domz.port, (char *) url.c_str()))
+          {
+            ret = false;
+          }
+
+          /*
+          Info(config.domz.host);
+          InfoF(":");
+          Info(config.domz.port);
+          Infoln((char *) url.c_str());
+          InfoF("ret=");
+          Infoln(ret);
+          Infoflush();
+          */
+      }
+      
+    } // if me
+  }
   return ret;
 }
 
