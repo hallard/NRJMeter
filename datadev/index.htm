@@ -3,6 +3,7 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="UTF-8">
+    <!--
     <link rel="stylesheet" href="css/bootstrap.min.css">
     <link rel="stylesheet" href="css/bootstrap-grid.min.css">
     <link rel="stylesheet" href="css/bootstrap-reboot.min.css">
@@ -13,6 +14,8 @@
     <link rel="stylesheet" href="css/tether-theme-basic.min.css">
     <link rel="stylesheet" href="css/jquery.terminal-1.7.2.min.css">
     <link rel="stylesheet" href="css/font-awesome.min.css">
+    -->
+    <link rel="stylesheet" href="css/libraries.min.css">
     <link rel="stylesheet" href="css/main.css">
     <title>NRJMeter</title>
 </head>
@@ -21,11 +24,13 @@
     <div class="container">
         <!--  Onglets  -->
         <ul class="nav nav-tabs" id="myTab">
-            <li class="nav-item"><a href="#tab_tinfo" class="nav-link" data-toggle="tab"><span class="fa fa-bolt">&nbsp;</span>Electric Meter&nbsp;<span class="badge" id="tcharge"></span></a></li>
-            <li class="nav-item"><a href="#tab_sensor" class="nav-link" data-toggle="tab"><span class="fa fa-tint">&nbsp;</span>Sensors&nbsp;<span class="badge" id="scharge"></span></a></li>
+            <li class="nav-item"><a href="#tab_tinfo" class="nav-link" data-toggle="tab"><span class="fa fa-bolt">&nbsp;</span>Electric Meter&nbsp;<span class="badge-pill badge-secondary" id="tcharge" style="font-size:0.75em;color:white"></span></a></li>
+            <li class="nav-item"><a href="#tab_sensor" class="nav-link" data-toggle="tab"><span class="fa fa-tint">&nbsp;</span>Sensors&nbsp;<span class="badge-pill badge-secondary" id="scharge" style="font-size:0.75em;color:white"></span></a></li>
             <li class="nav-item"><a href="#tab_sys" class="nav-link" data-toggle="tab"><span class="fa fa-cog">&nbsp;</span>System</a></li>
             <li class="nav-item"><a href="#tab_cfg" class="nav-link" data-toggle="tab"><span class="fa fa-wrench">&nbsp;</span>Configuration</a></li>
-            <li class="nav-item"><a href="#tab_fs" class="nav-link" data-toggle="tab"><span class="fa fa-folder-open">&nbsp;</span>Filesystem&nbsp;<span class="badge" id="sspiffs"></span></a></li>
+            <li class="nav-item"><a href="#tab_fs" class="nav-link" data-toggle="tab"><span class="fa fa-folder-open">&nbsp;</span>Filesystem&nbsp;<span class="badge-pill badge-secondary" id="sspiffs" style="font-size:0.75em;color:white"></span></a></li>
+            <li class="nav-item"><a href="#tab_log" class="nav-link" data-toggle="tab"><span class="fa fa-list-alt">&nbsp;</span>Logger</a></li>
+            <li class="nav-item"><a href="#tab_edit" class="nav-link" data-toggle="tab"><span class="fa fa-pencil-square-o">&nbsp;</span>Editor</a></li>
             <li class="nav-item"><a href="#tab_term" class="nav-link" data-toggle="tab"><span class="fa fa-terminal">&nbsp;</span>Terminal</a></li>
             <h6><span class="badge badge-pill badge-default" style="margin-top: 13px;margin-left: 13px;" id="connect">...</span></h6>
         </ul>
@@ -34,7 +39,7 @@
         <div class="tab-content">
 
             <!-- tab teleinfo -->
-            <div class="tab-pane fade in active" id="tab_tinfo">
+            <div class="tab-pane fade" id="tab_tinfo">
 
                 <br>
 
@@ -42,8 +47,17 @@
                     <span style="float:left;width:18ex;text-align:center;">Instant Energy: </span>
                     <div class="progress">
                         <div class="progress-bar bg-success" role="progressbar" style="width:0" id="pbar">
-                            <span class=show id="pcharge">Loading...</span>
+                            <span id="pcharge">Loading...</span>
                         </div>
+                    </div>
+                </div>
+
+                <br>
+
+                <div class="row">
+                    <p class="col-sm-2">Refresh rate:</p>
+                    <div class="col-sm-9">
+                        <input id="tinfo_sld_rfh" name="tinfo_sld_rfh" type="text" class="hidden" data-provide="slider" data-slider-min="2" data-slider-max="300" data-slider-value="2" data-slider-step="1" data-slider-ticks-snap-bounds="2" data-slider-ticks="[2,15,30,60,120,180,240,300]" data-slider-ticks-labels='["2s","15s","30s","1m","2m","3m","4m","5m"]' data-slider-ticks-positions="[0,14,28,43,57,71,86,100]" data-slider-tooltip="always" />
                     </div>
                 </div>
 
@@ -51,7 +65,7 @@
 
                 <div id="toolbar">
                 </div>
-                <table data-toggle="table" data-toolbar="#toolbar" class="table table-striped" data-show-refresh="false" data-show-toggle="false" data-show-columns="true" data-search="false" data-row-style="rowStyle" id="tab_tinfo_data" data-select-item-name="toolbar1">
+                <table data-toggle="table" data-toolbar="#toolbar" class="table table-striped" data-show-refresh="false" data-show-toggle="false" data-show-columns="true" data-search="false" data-row-style="rowStyle" id="tab_tinfo_data" data-select-item-name="toolbar1" style="font-size: 1em;">
                     <thead>
                         <tr>
                             <th data-field="na" data-align="left" data-sortable="true" data-formatter="labelFormatter">Label</th>
@@ -64,18 +78,9 @@
 
                 <br>
 
-                <div class="row">
-                    <p class="col-sm-2">Graph refresh rate:</p>
-                    <div class="col-sm-9">
-                        <input id="tinfo_sld_rfh" name="tinfo_sld_rfh" type="text" class="hidden" data-provide="slider" data-slider-min="2" data-slider-max="300" data-slider-value="2" data-slider-step="1" data-slider-ticks-snap-bounds="2" data-slider-ticks="[2,15,30,60,120,180,240,300]" data-slider-ticks-labels='["2s","15s","30s","1m","2m","3m","4m","5m"]' data-slider-ticks-positions="[0,14,28,43,57,71,86,100]" data-slider-tooltip="always" />
-                    </div>
-                </div>
-
-                <br>
-
                 <div class="card card-outline-info" id="pan_tinfo_papp_iinst">
                     <div class="card-header card-info clickable" data-toggle="collapse" id="panhead_tinfo_papp_iinst" data-parent="#tab_tinfo" data-target="#col_tinfo_papp_iinst">
-                        Electric Meter&nbsp;&nbsp;&nbsp;
+                        <strong>Electric Meter</strong>&nbsp;&nbsp;&nbsp;
                         <span id="sp_tinfo_papp_iinst_state" class="badge badge-pill badge-danger">Not Found/Enabled</span>&nbsp;&nbsp;&nbsp; Power <span id="sp_tinfo_papp" class="badge badge-success">0W</span>&nbsp;&nbsp;&nbsp; Energy <span id="sp_tinfo_iinst" class="badge badge-info">0A</span>&nbsp;&nbsp;&nbsp;
                         <span id="sp_tinfo_papp_iinst_ago"></span>
                         <span class="pull-right fa fa-chevron-down"></span>
@@ -94,24 +99,23 @@
             <!-- tab pane teleinfo -->
 
             <!-- tab sensors -->
-            <div class="tab-pane fade in active" id="tab_sensor">
+            <div class="tab-pane fade" id="tab_sensor">
                 <br>
+
                 <div class="row">
-                    <p class="col-sm-2">Graph refresh rate:</p>
+                    <p class="col-sm-2">Refresh rate:</p>
                     <div class="col-sm-9">
-                        <input id="sensors_sld_rfh" name="sensors_sld_rfh" type="text" class="hidden" data-provide="slider" data-slider-min="2" data-slider-max="300" data-slider-value="2" data-slider-step="1" data-slider-ticks-snap-bounds="2" data-slider-ticks="[2,15,30,60,120,180,240,300]" data-slider-ticks-labels='["2s","15s","30s","1m","2m","3m","4m","5m"]' data-slider-ticks-positions="[0,14,28,43,57,71,86,100]" data-slider-tooltip="always" />
+                        <input id="sensors_sld_rfh" name="sensors_sld_rfh" type="text" data-provide="slider" data-slider-min="2" data-slider-max="300" data-slider-value="2" data-slider-step="1" data-slider-ticks-snap-bounds="2" data-slider-ticks="[2,15,30,60,120,180,240,300]" data-slider-ticks-labels='["2s","15s","30s","1m","2m","3m","4m","5m"]' data-slider-ticks-positions="[0,14,28,43,57,71,86,100]" data-slider-tooltip="always" />
                     </div>
                 </div>
 
                 <br>
 
                 <div class="row">
-
                     <p class="col-sm-2">Panel Power:</p>
                     <div class="col-sm-9">
-                        <input id="led_panel" name="led_panel" class="col-sm-6" type="text" data-provide="slider" data-slider-min="0" data-slider-max="100" data-slider-value="0" data-slider-step="1" data-slider-ticks-snap-bounds="4" data-slider-ticks="[0, 25, 50, 75, 100]" data-slider-ticks-labels='["Off", "25%", "50%", "75%", "Full"]'>
+                        <input id="led_panel" name="led_panel" type="text" data-provide="slider" data-slider-min="0" data-slider-max="100" data-slider-value="0" data-slider-step="1" data-slider-ticks-snap-bounds="4" data-slider-ticks="[0, 25, 50, 75, 100]" data-slider-ticks-labels='["Off", "25%", "50%", "75%", "Full"]'>
                     </div>
-
                 </div>
 
                 <br>
@@ -119,14 +123,14 @@
 
                 <div class="card card-outline-info" id="pan_mcp3421">
                     <div class="card-header card-info clickable" data-toggle="collapse" id="panhead_mcp3421" data-parent="#tab_sensor" data-target="#col_mcp3421">
-                        Power Consumption (MCP3421)&nbsp;&nbsp;&nbsp;
+                        <strong>Power Consumption (MCP3421)</strong>&nbsp;&nbsp;&nbsp;
                         <span id="sp_mcp3421_state" class="badge badge-pill badge-danger">Not Found/Enabled</span>&nbsp;&nbsp;&nbsp; Power <span id="sp_mcp3421_pwr" class="badge badge-pill badge-success">0W</span>&nbsp;&nbsp;&nbsp;
                         <span id="sp_mcp3421_ago"></span>
                         <span class="pull-right fa fa-chevron-down"></span>
                     </div>
                     <div class="card-collapse collapse in" id="col_mcp3421">
                         <div class="card-block">
-                            <canvas id="mcp3421_chart"></canvas>
+                            <canvas id="mcp3421_chart" width="800" height="180"></canvas>
                             <!--<canvas id="mcp3421_gauge"></canvas>-->
                             <div class="card-footer card-info text-muted" style="display: none;"></div>
                         </div>
@@ -138,7 +142,7 @@
 
                 <div class="card card-outline-info" id="pan_si7021">
                     <div class="card-header card-info clickable" data-toggle="collapse" id="panhead_si7021" data-parent="#tab_sensor" data-target="#col_si7021">
-                        Internal Sensor Values (SI7021)&nbsp;&nbsp;&nbsp;
+                        <strong>Internal Sensor Values (SI7021)</strong>&nbsp;&nbsp;&nbsp;
                         <span id="sp_si7021_state" class="badge badge-pill badge-danger">Not Found/Enabled</span>&nbsp;&nbsp;&nbsp; Temperature <span id="sp_si7021_temp" class="badge badge-pill badge-success">0C°</span>&nbsp;&nbsp;&nbsp; Humidity <span id="sp_si7021_hum" class="badge badge-pill badge-info">0%</span>&nbsp;&nbsp;&nbsp;
                         <span id="sp_si7021_ago"></span>
                         <span class="pull-right fa fa-chevron-down"></span>
@@ -156,7 +160,7 @@
 
                 <div class="card card-outline-info" id="pan_sht10">
                     <div class="card-header card-info clickable" data-toggle="collapse" id="panhead_sht10" data-parent="#tab_sensor" data-target="#col_sht10">
-                        External Sensor Values (SHT10)&nbsp;&nbsp;&nbsp;
+                        <strong>External Sensor Values (SHT10)</strong>&nbsp;&nbsp;&nbsp;
                         <span id="sp_sht10_state" class="badge badge-pill badge-danger">Not Found/Enabled</span>&nbsp;&nbsp;&nbsp; Temperature <span id="sp_sht10_temp" class="badge badge-pill badge-success">0C°</span>&nbsp;&nbsp;&nbsp; Humidity <span id="sp_sht10_hum" class="badge badge-pill badge-info">0%</span>&nbsp;&nbsp;&nbsp;
                         <span id="sp_sht10_ago"></span>
                         <span class="pull-right fa fa-chevron-down"></span>
@@ -176,7 +180,7 @@
             <!-- tab Systeme -->
             <div class="tab-pane fade" id="tab_sys">
                 <br>
-                <table data-toggle="table" class="table table-striped table-condensed" data-show-refresh="true" data-show-toggle="true" data-search="true" id="tab_sys_data" data-select-item-name="toolbar2">
+                <table data-toggle="table" class="table table-striped table-condensed" data-show-refresh="false" data-show-toggle="false" data-search="false" id="tab_sys_data" data-select-item-name="toolbar2" style="font-size: 1em;">
                     <thead>
                         <tr>
                             <th data-field="na" data-align="left">Name</th>
@@ -194,8 +198,53 @@
                     <span style="float:left;width:18ex;text-align:center;">Usage : </span>
                     <div class="progress">
                         <div class="progress-bar progress-bar-success" style="width:0" id="pfsbar">
-                            <span class=show id="fs_use">Calculating</span>
+                            <span id="fs_use">Calculating...</span>
                         </div>
+                    </div>
+                </div>
+
+                <br>
+
+                <!-- SPIFFS upload file -->
+                <div class="card card-outline-info">
+                    <div class="card-header card-info">
+                        <strong>SPIFFS Utilities</strong>
+                    </div>
+                    <div class="card-block">
+
+                        <br>
+
+                        <div class="form-group">
+
+                            <form method='POST' id='frm_fs' action='/upload' enctype='multipart/form-data'>
+                                <div class="col-sm-9">
+                                    <div class="input-group">
+                                        <span class="input-group-btn">
+												<span class="btn btn-primary btn-file">Choose a file to upload (or overwritte)&hellip; 
+													<input id="file_fs" type="file" name="upload">
+												</span>
+                                        </span>
+                                        <input id="txt_upload_fs" type="text" size="32" class="form-control" placeholder="No file selected" readonly>
+                                    </div>
+                                </div>
+                                <div class="col-sm-3">
+                                    <input class="btn btn-danger hide" type="button" id="btn_upload_fs" value="">
+                                </div>
+                            </form>
+
+                            <div id='pgfs' class='hide'>
+                                <span id='sfs' style="float:left;width:18ex;text-align:center;"></span>
+                                <div class="progress">
+                                    <div class="progress-bar progress-bar-success" style="width:0" id="pfs">
+                                        <span id="psfs"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="card-footer card-outline-info text-muted">
+                        <p id="fs_info"></p>
                     </div>
                 </div>
 
@@ -203,22 +252,19 @@
 
                 <!-- SPIFFS table toolbar -->
                 <div id="fs_toolbar">
-                    <input class="btn btn-primary" type="button" id="btn_edit_spiffs" onclick="openNewTab('edit.htm');" value="SPIFFS Editor" />
                 </div>
-
-                <br>
 
                 <div class="card card-outline-default">
                     <div class="card-header card-default">
-                        SPIFFS Filesystem <span class="pull-right" id="spiffs_version"></span>
+                        <strong>SPIFFS Filesystem</strong><span class="pull-right" id="spiffs_version"></span>
                     </div>
                     <div class="card-block">
-                        <table data-toggle="table" data-toolbar="#fs_toolbar" class="table table-striped table-condensed" data-show-refresh="true" data-show-columns="true" data-search="true" id="tab_fs_data" data-select-item-name="toolbar4">
+                        <table data-toggle="table" data-toolbar="#fs_toolbar" class="table table-striped table-condensed" data-show-refresh="false" data-show-columns="false" data-search="false" id="tab_fs_data" data-select-item-name="toolbar4" style="font-size: 1em;">
                             <thead>
                                 <tr>
                                     <th data-field="na" data-align="left" data-formatter="fileFormatter">File</th>
                                     <th data-field="va" data-align="center" data-sortable="true">Size (Byte)</th>
-                                    <th data-field="act" data-align="left">Action</th>
+                                    <th data-field="ac" data-align="center" data-formatter="deleteButtonMaker">Action</th>
                                 </tr>
                             </thead>
                         </table>
@@ -229,35 +275,40 @@
 
                 <div class="card card-outline-danger">
                     <div class="card-header card-danger">
-                        Firmware or WEB server Update
+                        <strong>Firmware / SPIFFS Update</strong>
                     </div>
                     <div class="card-block">
-                        <div class="row">
+
+                        <br>
+
+                        <div class="form-group">
+
                             <form method='POST' id='frm_fw' action='/update' enctype='multipart/form-data'>
-                                <div class="col-xs-9">
+                                <div class="col-sm-9">
                                     <div class="input-group">
                                         <span class="input-group-btn">
-												<span class="btn btn-info btn-file">Choose file&hellip; 
+												<span class="btn btn-primary btn-file">Choose file&hellip; 
 													<input id="file_fw" type="file" name="update"/>
 												</span>
                                         </span>
-                                        <input id="txt_upload_fw" type="text" size="32" class="form-control" placeholder="no .cpp.bin or .spiffs.bin file selected" readonly>
+                                        <input id="txt_upload_fw" type="text" size="32" class="form-control" placeholder="No .cpp.bin or .spiffs.bin file selected" readonly>
                                     </div>
                                 </div>
-                                <div class="col-xs-3">
-                                    <!--<input class="btn btn-danger hide" type="button" id="btn_upload_fw" onclick="Sendfile('fw');" value=""/>-->
+                                <div class="col-sm-3">
                                     <input class="btn btn-danger hide" type="button" id="btn_upload_fw" value="" />
                                 </div>
                             </form>
-                        </div>
 
-                        <div id='pgfw' class='hide'>
-                            <span id='sfw' style="float:left;width:18ex;text-align:center;"></span>
-                            <div class="progress">
-                                <div class="progress-bar progress-bar-success" style="width:0" id="pfw">
-                                    <span id="psfw"></span>
+
+                            <div id='pgfw' class='hide'>
+                                <span id='sfw' style="float:left;width:18ex;text-align:center;"></span>
+                                <div class="progress">
+                                    <div class="progress-bar progress-bar-success" style="width:0" id="pfw">
+                                        <span id="psfw"></span>
+                                    </div>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                     <div class="card-footer card-outline-danger text-muted">
@@ -266,6 +317,40 @@
                 </div>
             </div>
             <!-- tab pane SPIFFS-->
+
+            <!-- tab log -->
+            <div class="tab-pane fade" id="tab_log">
+                <br>
+                <table data-toggle="table" class="table table-striped table-condensed" data-show-refresh="true" data-show-toggle="false" data-search="true" id="tab_log_data" data-select-item-name="toolbar2" data-sort-name="er" data-sort-order="desc">
+                    <thead>
+                        <tr>
+                            <th data-field="er" data-align="center" data-sortable="true">Event</th>
+                            <th data-field="ev" data-align="left" data-sortable="false">Mesage</th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+            <!-- tab log-->
+
+            <!-- tab edit -->
+            <div class="tab-pane fade" id="tab_edit">
+                <br>
+                <div class="card card-outline-primary" id="pan_edit">
+                    <div class="card-header card-primary">
+                        <span class="fa fa-pencil-square-o"></span>&nbsp;SPIFFS File Editor<span id="pan_edit_mM" class="pull-right fa fa-window-maximize clickable"></span>
+                    </div>
+                    <div class="card" id="col_edit">
+                        <div class="card-block">
+                            <iframe id="tab_edit_frm" name="tab_edit_frm" src="" style="width:100%; height:100%;"></iframe>
+                        </div>
+                        <!-- panel body-->
+                        <!--
+                        <div class="card-footer">
+                        </div>-->
+                    </div>
+                </div>
+            </div>
+            <!-- tab edit-->
 
             <!-- tab Configuration -->
             <div class="tab-pane fade" id="tab_cfg">
@@ -278,90 +363,109 @@
                             <div class="card-header card-primary clickable" data-toggle="collapse" data-parent="#pan_cfg" data-target="#col_cfg">
                                 <span class="fa fa-signal"></span>&nbsp;Wireless Network<span class="pull-right fa fa-chevron-up"></span>
                             </div>
-                            <div class="card-collapse collapse in" id="col_cfg">
+                            <div class="card-collapse collapse show" id="col_cfg">
                                 <div class="card-block">
 
-
+                                    <br>
                                     <div class="form-group form-inline">
-                                        <label class="col-sm-3 control-label">Enable Wifi</label>
-                                        <div class="col-sm-9">
-                                            <input class="checkbox" id="cfg_wifi" name="cfg_wifi" type="checkbox" data-label-text="Wifi" /> Change need Restart
-                                            <span class="help-block">Wifi will always be enabled for 5 minutes after reset/power on to access configuration.</span>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Wifi SSID</label>
+                                        <strong class="col-sm-3 control-label">Enable Wifi</strong>
                                         <div class="col-sm-9">
                                             <div class="input-group">
-                                                <input type="text" class="form-control" id="ssid" name="ssid" maxlength="32" value="" placeholder="Wifi SSID">
+                                                <input class="checkbox" id="cfg_wifi" name="cfg_wifi" type="checkbox" data-label-text="Wifi" /> &nbsp;Change need Restart
+                                            </div>
+                                            <div class="help-block text-muted">Wifi will always be enabled for 5 minutes after reset/power on to access configuration.</div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Wifi SSID</strong>
+                                        <div class="col-sm-9">
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" style="width:100%" id="ssid" name="ssid" maxlength="32" value="" placeholder="Wifi SSID">
                                                 <div class="input-group-btn">
-                                                    <button class="btn btn-default dropdown-toggle" type="button" id="btn_scan" data-toggle="modal" data-target="#tab_scan">&nbsp;<span class="fa fa-zoom-in"></span></button>
+                                                    <button class="btn btn-primary dropdown-toggle" type="button" id="btn_scan" data-toggle="modal" data-target="#tab_scan">&nbsp;<span class="fa fa-wifi"></span></button>
                                                 </div>
                                             </div>
-                                            <span class="help-block">Connect this device to existing Wifi network.</span>
+                                            <span class="help-block text-muted">Connect this device to existing Wifi network.</span>
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Wifi key</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Wifi key</strong>
                                         <div class="col-sm-9">
-                                            <input type="password" class="form-control" id="psk" name="psk" maxlength="64" data-toggle="password" placeholder="Wifi key (PSK)">
-                                            <span class="help-block" Connect>Existing Wifi network password.</span>
+                                            <input type="password" class="form-control" style="width:100%" id="psk" name="psk" maxlength="64" data-toggle="password" placeholder="Wifi key (PSK)">
+                                            <div class="help-block text-muted" Connect>Existing Wifi network password.</div>
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Device Name</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Wifi Connect Timeout</strong>
                                         <div class="col-sm-9">
-                                            <input type="text" class="form-control" id="host" name="host" maxlength="32" required placeholder="Device Module network name">
-                                            <span class="help-block">Network hostname of this device.</span>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" style="width:100%" id="wmw" name="wmw" step="5" min="5" max="60" placeholder="Timeout">
+                                                <span class="input-group-addon">s</span>
+                                            </div>
+                                            <div class="help-block text-muted" Connect>After timeout, access point mode takes over</div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Device Name</strong>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" style="width:100%" id="host" name="host" maxlength="32" required placeholder="Device Module network name">
+                                            <div class="help-block text-muted">Network hostname of this device.</div>
 
                                         </div>
                                     </div>
 
                                     <div class="form-group form-inline">
-                                        <label class="col-sm-3 control-label">Access Point</label>
+                                        <strong class="col-sm-3 control-label">Access Point</strong>
                                         <div class="col-sm-9">
-                                            <input class="checkbox" id="cfg_ap" name="cfg_ap" type="checkbox" data-label-text="AP" /> Change need Restart
-                                            <span class="help-block">When enabled you'll be able to direct connect to this device with Wifi. Note that Access point will always be enabled for 5 minutes after reset/power on to access configuration.</span>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Access Point SSID</label>
-                                        <div class="col-sm-9">
-                                            <input type="text" class="form-control" id="apssid" name="apssid" maxlength="32" placeholder="Device Access Point SSID" required>
-                                            <span class="help-block">Wireless name that will be shown in your Wifi Network list.</span>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Access Point Key</label>
-                                        <div class="col-sm-9">
-                                            <input type="text" class="form-control" id="appsk" name="appsk" maxlength="64" data-toggle="password" placeholder="Leave emtpy to have opened unsecure access point">
-                                            <span class="help-block">Password to connect to Device Wifi access point (empty NOT recommended).</span>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Static Wifi</label>
-                                        <div class="col-sm-9">
-                                            <input class="checkbox" id="cfg_static" name="cfg_static" type="checkbox" data-label-text="Static"> Change need Restart
+                                            <input class="checkbox" id="cfg_ap" name="cfg_ap" type="checkbox" data-label-text="AP" /> &nbsp;Change need Restart
+                                            <div class="help-block text-muted">When enabled you'll be able to direct connect to this device with Wifi. Note that Access point will always be enabled for 5 minutes after reset/power on to access configuration.</div>
                                         </div>
                                     </div>
 
                                     <div class="form-group form-inline">
-                                        <label class="col-sm-3 control-label">Static IP / Mask</label>
+                                        <strong class="col-sm-3 control-label">Access Point SSID</strong>
                                         <div class="col-sm-9">
-                                            <input class="form-control" type="text" id="ip" name="ip" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}">&nbsp;
-                                            <label>&nbsp;/&nbsp;</label>
-                                            <input class="form-control" type="text" id="mask" name="mask" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}"> Example: 192.168.1.10 / 255.255.255.0
+                                            <input type="text" class="form-control" style="width:100%" id="apssid" name="apssid" maxlength="32" placeholder="Device Access Point SSID" required>
+                                            <div class="help-block text-muted">Wireless name that will be shown in your Wifi Network list.</div>
                                         </div>
                                     </div>
                                     <div class="form-group form-inline">
-                                        <label class="col-sm-3 control-label">Static Gateway / DNS</label>
+                                        <strong class="col-sm-3 control-label">Access Point Key</strong>
                                         <div class="col-sm-9">
-                                            <input class="form-control" type="text" id="gw" name="gw" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}">&nbsp;
-                                            <label>&nbsp;/&nbsp;</label>
-                                            <input class="form-control" type="text" id="dns" name="dns" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}"> Example: 192.168.1.254 / 192.168.1.1
+                                            <input type="text" class="form-control" style="width:100%" id="appsk" name="appsk" maxlength="64" data-toggle="password" placeholder="Leave emtpy to have opened unsecure access point">
+                                            <div class="help-block text-muted">Password to connect to Device Wifi access point (empty NOT recommended).</div>
                                         </div>
+                                    </div>
+
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Static Wifi</strong>
+                                        <div class="col-sm-9">
+                                            <input class="checkbox" id="cfg_static" name="cfg_static" type="checkbox" data-label-text="Static"> &nbsp;Change need Restart
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Static IP / Mask</strong>
+                                        <div class="col-sm-9">
+                                            <div class="input-group">
+                                                <input class="form-control" type="text" id="ip" name="ip" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}">
+                                                <span class="input-group-addon">/</span>
+                                                <input class="form-control" type="text" id="mask" name="mask" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}">
+                                            </div>
+                                            <div class="help-block text-muted">Example: 192.168.1.10 / 255.255.255.0</div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Static Gateway / DNS</strong>
+                                        <div class="col-sm-9">
+                                            <div class="input-group">
+                                                <input class="form-control" type="text" id="gw" name="gw" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}">
+                                                <span class="input-group-addon">/</span>
+                                                <input class="form-control" type="text" id="dns" name="dns" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}">
+                                            </div>
+                                            <div class="help-block text-muted">Example: 192.168.1.254 / 192.168.1.1</div>
+                                        </div>
+
 
                                     </div>
                                 </div>
@@ -384,18 +488,25 @@
                             </div>
                             <div class="card-collapse collapse in" id="col_tinfo">
                                 <div class="card-block">
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Activated Eletric Meter Teleinformation</label>
+
+                                    <br>
+
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Activated Eletric Smart Meter</strong>
                                         <div class="col-sm-3">
                                             <input class="checkbox-inline" id="tinfo_edf" name="tinfo_edf" type="checkbox" data-label-text="EDF (téléinformation)">
                                         </div>
+                                        <div class="cold-sm-3">
+                                            <input class="checkbox-inline disabled" id="tinfo_dsm" name="tinfo_edsm" type="checkbox" data-label-text="Deutch Smart&nbsp;Meter">
+                                        </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">RGB Led controls</label>
+                                    <!--
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">RGB Led controls</strong>
                                         <div class="col-sm-9">
                                             <div class="form-group row padtop7">
                                                 <div class="col-sm-3">
-                                                    <p><strong>Power (W)</strong></p>
+                                                    <h6 style="float: right">Power (W)</h6>
                                                 </div>
                                                 <div class="col-sm-1">
                                                     <p class="text-right"><span class="badge pull-right">0W</span></p>
@@ -410,7 +521,7 @@
                                             <br>
                                             <div class="form-group row">
                                                 <div class="col-sm-3">
-                                                    <p><strong>Energy (A)</strong></p>
+                                                    <h6 style="float: right">Energy (A)</h6>
                                                 </div>
                                                 <div class="col-sm-1">
                                                     <span class="badge pull-right">0A</span>
@@ -423,10 +534,9 @@
                                                 </div>
                                             </div>
                                             <br>
-                                            <!--
 													<div class="form-group row">
 														<div class="col-sm-3">
-															<p><strong>Brightness (TODO)</strong></p>
+															<h6 style="float: right">Brightness (TODO)</h6>
 														</div>
 														<div class="col-sm-1">
 															<span class="badge pull-right">0%</span>
@@ -448,7 +558,7 @@
 
 													<div class="form-group row">
 														<div class="col-sm-3">
-															<p><strong>Heartbeat Frequency (TODO)</strong></p>
+															<p><h6 style="float: right">Heartbeat Frequency (TODO)</h6></p>
 														</div>
 														<div class="col-sm-1">
 															<span class="badge pull-right">0%</span>
@@ -466,9 +576,9 @@
 															<span class="badge">100%</span>
 														</div>
 													</div>													
--->
+
                                         </div>
-                                    </div>
+                                    </div>-->
                                 </div>
 
                                 <div class="card-footer">
@@ -489,8 +599,11 @@
                             </div>
                             <div class="card-collapse collapse in" id="col_sensors">
                                 <div class="card-block">
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Activated sensors</label>
+
+                                    <br>
+
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Activated sensors</strong>
                                         <div class="col-sm-3">
                                             <input class="checkbox-inline" id="sens_si7021" name="sens_si7021" type="checkbox" data-label-text="Internal (SI7021)">
                                         </div>
@@ -501,8 +614,8 @@
                                             <input class="checkbox-inline" id="sens_mcp3421" name="sens_mcp3421" type="checkbox" data-label-text="Analog (MCP3421)">
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Sensors Reading Frequency</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Sensors Reading Frequency</strong>
                                         <div class="col-sm-9">
                                             <select id="sens_freq" name="sens_freq" class="form-control col-sm-2">
 														<option value="0">disabled</option>
@@ -522,12 +635,12 @@
                                         </div>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">RGB Led controls</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">RGB Led controls</strong>
                                         <div class="col-sm-9">
                                             <div class="form-group row padtop7">
                                                 <div class="col-sm-3">
-                                                    <p><strong>Temperature °C</strong></p>
+                                                    <h6 style="float: right">Temperature °C</h6>
                                                 </div>
                                                 <div class="col-sm-1">
                                                     <p class="text-right"><span class="badge pull-right">-20°C</span></p>
@@ -542,7 +655,7 @@
                                             <br>
                                             <div class="form-group row">
                                                 <div class="col-sm-3">
-                                                    <p><strong>Relative Humidity (%RH)</strong></p>
+                                                    <h6 style="float: right">Relative Humidity (%RH)</h6>
                                                 </div>
                                                 <div class="col-sm-1">
                                                     <span class="badge pull-right">0%</span>
@@ -558,7 +671,7 @@
 
                                             <div class="form-group row">
                                                 <div class="col-sm-3">
-                                                    <p><strong>Power Consumption (W)</strong></p>
+                                                    <h6 style="float: right">Power Consumption (W)</h6>
                                                 </div>
                                                 <div class="col-sm-1">
                                                     <span class="badge pull-right">0W</span>
@@ -574,7 +687,7 @@
 
                                             <div class="form-group row">
                                                 <div class="col-sm-3">
-                                                    <p><strong>Brightness</strong></p>
+                                                    <h6 style="float: right">Brightness</h6>
                                                 </div>
                                                 <div class="col-sm-1">
                                                     <span class="badge pull-right">0%</span>
@@ -590,7 +703,7 @@
 
                                             <div class="form-group row">
                                                 <div class="col-sm-3">
-                                                    <p><strong>Heartbeat Frequency</strong></p>
+                                                    <h6 style="float: right">Heartbeat Frequency</h6>
                                                 </div>
                                                 <div class="col-sm-1">
                                                     <span class="badge pull-right">0%</span>
@@ -605,6 +718,9 @@
 
                                         </div>
                                     </div>
+
+                                    <br>
+
                                 </div>
 
                                 <div class="card-footer">
@@ -625,26 +741,29 @@
                             </div>
                             <div class="card-collapse collapse out" id="col_emon">
                                 <div class="card-block">
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Send data</label>
+
+                                    <br>
+
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Update interval</strong>
                                         <div class="col-sm-9">
                                             <select id="emon_port" name="emon_freq" class="form-control col-sm-2">
-														<option value="0">disabled</option>
-														<option value="15">every 15 seconds</option>
-														<option value="30">every 30 seconds</option>
-														<option value="60">every minute</option>
-														<option value="300">every 5 minutes</option>
-														<option value="900">every 15 minutes</option>
-														<option value="1800">every 30 minutes</option>
-														<option value="3600">every hour</option>
-														<option value="21600">every 6 hours</option>
-														<option value="42300">every 12 hours</option>
-														<option value="86400">every day</option>
+														<option value="0">Disabled</option>
+														<option value="15">Every 15 seconds</option>
+														<option value="30">Every 30 seconds</option>
+														<option value="60">Every minute</option>
+														<option value="300">Every 5 minutes</option>
+														<option value="900">Every 15 minutes</option>
+														<option value="1800">Every 30 minutes</option>
+														<option value="3600">Every hour</option>
+														<option value="21600">Every 6 hours</option>
+														<option value="42300">Every 12 hours</option>
+														<option value="86400">Every day</option>
 													</select>
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Protocol</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Port</strong>
                                         <div class="col-sm-9">
                                             <select id="emon_port" name="emon_port" class="form-control col-sm-2">
 														<option value="80">http (80)</option>
@@ -652,30 +771,30 @@
 													</select>
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Server name</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Host</strong>
                                         <div class="col-sm-9">
-                                            <input type="text" class="form-control" id="emon_host" name="emon_host" maxlength="32" placeholder="Server name">
+                                            <input type="text" class="form-control" style="width: 100%" id="emon_host" name="emon_host" maxlength="32" placeholder="Server">
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">URL</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">URL</strong>
                                         <div class="col-sm-9">
-                                            <input type="text" class="form-control" id="emon_url" name="emon_url" maxlength="32" placeholder="Url">
+                                            <input type="text" class="form-control" style="width: 100%" id="emon_url" name="emon_url" maxlength="32" placeholder="Url">
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">API Key</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">API Key</strong>
                                         <div class="col-sm-9">
-                                            <input type="text" class="form-control" id="emon_apikey" name="emon_apikey" maxlength="32" placeholder="API Key">
+                                            <input type="text" class="form-control" style="width: 100%" id="emon_apikey" name="emon_apikey" maxlength="32" placeholder="API Key">
                                         </div>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Node ID</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Node ID</strong>
                                         <div class="col-sm-9">
-                                            <input type="number" class="form-control" id="emon_node" name="emon_node" size="3" min="0" max="254" placeholder="Node ID">
-                                            <span class="help-block">0 mean no node ID used.</span>
+                                            <input type="number" class="form-control" style="width: 100%" id="emon_node" name="emon_node" size="3" min="0" max="254" placeholder="Node ID">
+                                            <span class="help-block text-muted">0 mean no node ID used.</span>
                                         </div>
                                     </div>
                                 </div>
@@ -697,8 +816,11 @@
                             </div>
                             <div class="card-collapse collapse out" id="col_jdom">
                                 <div class="card-block">
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Protocole</label>
+
+                                    <br>
+
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Port</strong>
                                         <div class="col-sm-9">
                                             <select id="jdom_port" name="jdom_port" class="form-control col-sm-2">
 														<option value="80">http (80)</option>
@@ -707,54 +829,54 @@
 													</select>
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Serveur Jeedom</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Host</strong>
                                         <div class="col-sm-9">
-                                            <input type="text" class="form-control" id="jdom_host" name="jdom_host" maxlength="32" placeholder="Serveur">
+                                            <input type="text" class="form-control" style="width: 100%" id="jdom_host" name="jdom_host" maxlength="32" placeholder="Server">
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">URL</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">URL</strong>
                                         <div class="col-sm-9">
-                                            <input type="text" class="form-control" id="jdom_url" name="jdom_url" maxlength="64" placeholder="Url">
+                                            <input type="text" class="form-control" style="width: 100%" id="jdom_url" name="jdom_url" maxlength="64" placeholder="Url">
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Clé API</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">API Key</strong>
                                         <div class="col-sm-9">
-                                            <input type="text" class="form-control" id="jdom_apikey" name="jdom_apikey" maxlength="32" placeholder="API Key">
+                                            <input type="text" class="form-control" style="width: 100%" id="jdom_apikey" name="jdom_apikey" maxlength="32" placeholder="API Key">
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Mise à jour</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Update interval</strong>
                                         <div class="col-sm-9">
                                             <select id="jdom_freq" name="jdom_freq" class="form-control col-sm-2">
-														<option value="0">désactivée</option>
-														<option value="15">toutes les 15 secondes</option>
-														<option value="30">toutes les 30 secondes</option>
-														<option value="60">toutes les minutes</option>
-														<option value="300">toutes les 5 minutes</option>
-														<option value="900">tous les 1/4 d"heure</option>
-														<option value="1800">toutes les 1/2 heure</option>
-														<option value="3600">toutes les heures</option>
-														<option value="21600">toutes les 6 heures</option>
-														<option value="42300">toutes les 12 heures</option>
-														<option value="86400">tous les jours</option>
+														<option value="0">Disabled</option>
+														<option value="15">Every 15 seconds</option>
+														<option value="30">Every 30 seconds</option>
+														<option value="60">Every minute</option>
+														<option value="300">Every 5 minutes</option>
+														<option value="900">Every 15 minutes</option>
+														<option value="1800">Every 30 minutes</option>
+														<option value="3600">Every hour</option>
+														<option value="21600">Every 6 hours</option>
+														<option value="42300">Every 12 hours</option>
+														<option value="86400">Every day</option>
 													</select>
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Identifiant compteur</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">ADCO Counter ID</strong>
                                         <div class="col-sm-9">
-                                            <input type="text" class="form-control" id="jdom_adco" name="jdom_adco" maxlength="12" placeholder="ADCO Compteur">
-                                            <span class="help-block">Uniquement si vous souhaitez forcer un autre identifiant que celui de votre compteur.</span>
+                                            <input type="text" class="form-control" style="width: 100%" id="jdom_adco" name="jdom_adco" maxlength="12" placeholder="ADCO Counter">
+                                            <span class="help-block text-muted">Only needed to override your legacy ADCO if needed. Leave blank otherwise.</span>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="card-footer">
                                     <div class="text-center">
                                         <div class="btn-group">
-                                            <button type="submit" class="btn btn-default btn-warning">Enregistrer</button>
+                                            <button type="submit" class="btn btn-default btn-warning">Save</button>
                                         </div>
                                     </div>
                                 </div>
@@ -765,12 +887,15 @@
                         <!-- Panel domoticz -->
                         <div class="card card-outline-warning" id="pan_domz">
                             <div class="card-header card-warning clickable" data-toggle="collapse" data-parent="#pan_domz" data-target="#col_domz">
-                                <span class="fa fa-link"></span>&nbsp;DomoticZ<span class="pull-right fa fa-chevron-down"></span>
+                                <span class="fa fa-link"></span>&nbsp;Domoticz<span class="pull-right fa fa-chevron-down"></span>
                             </div>
                             <div class="card-collapse collapse out" id="col_domz">
                                 <div class="card-block">
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Protocole</label>
+
+                                    <br>
+
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Port</strong>
                                         <div class="col-sm-9">
                                             <select id="domz_port" name="domz_port" class="form-control col-sm-2">
 														<option value="80">http (80)</option>
@@ -779,58 +904,72 @@
 													</select>
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Serveur Domoticz</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Hostname</strong>
                                         <div class="col-sm-9">
-                                            <input type="text" class="form-control" id="domz_host" name="domz_host" maxlength="32" placeholder="Serveur">
+                                            <input type="text" class="form-control" style="width: 100%" id="domz_host" name="domz_host" maxlength="32" placeholder="Server Hostname">
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">URL</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">URL</strong>
                                         <div class="col-sm-9">
-                                            <input type="text" class="form-control" id="domz_url" name="domz_url" maxlength="64" placeholder="Url">
+                                            <input type="text" class="form-control" style="width: 100%" id="domz_url" name="domz_url" maxlength="64" placeholder="Url">
                                         </div>
                                     </div>
 
                                     <div class="form-group form-inline">
-                                        <label class="col-sm-3 control-label">User @ Password</label>
-                                        <div class="col-sm-9">
-                                            <input class="form-control" type="text" id="domz_user" name="domz_user" maxlength="16">&nbsp;
-                                            <label>&nbsp;@&nbsp;</label>
-                                            <input class="form-control" type="text" id="domz_pass" name="domz_pass" maxlength="16" />
+                                        <strong class="col-sm-3 control-label">Basic Authentication</strong>
+                                        <div class="col-sm-9 input-group">
+                                            <input class="form-control" type="text" id="domz_user" name="domz_user" maxlength="16" placeholder="User">
+                                            <span class="input-group-addon">@</span>
+                                            <input class="form-control" type="password" id="domz_pass" name="domz_pass" maxlength="16" placeholder="Password">
                                         </div>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Mise à jour</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Update interval</strong>
                                         <div class="col-sm-9">
                                             <select id="domz_freq" name="domz_freq" class="form-control col-sm-2">
-														<option value="0">désactivée</option>
-														<option value="15">toutes les 15 secondes</option>
-														<option value="30">toutes les 30 secondes</option>
-														<option value="60">toutes les minutes</option>
-														<option value="300">toutes les 5 minutes</option>
-														<option value="900">tous les 1/4 d"heure</option>
-														<option value="1800">toutes les 1/2 heure</option>
-														<option value="3600">toutes les heures</option>
-														<option value="21600">toutes les 6 heures</option>
-														<option value="42300">toutes les 12 heures</option>
-														<option value="86400">tous les jours</option>
+														<option value="0">Disabled</option>
+														<option value="15">Every 15 seconds</option>
+														<option value="30">Every 30 seconds</option>
+														<option value="60">Every minute</option>
+														<option value="300">Every 5 minutes</option>
+														<option value="900">Every 15 minutes</option>
+														<option value="1800">Every 30 minutes</option>
+														<option value="3600">Every hour</option>
+														<option value="21600">Every 6 hours</option>
+														<option value="42300">Every 12 hours</option>
+														<option value="86400">Every day</option>
 													</select>
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Id du device</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Devices</strong>
                                         <div class="col-sm-9">
+                                            <!--
                                             <input type="number" class="form-control" id="domz_idx" name="domz_idx" size="5" min="0" max="65535" placeholder="Dev ID">
                                             <span class="help-block">Numéro du device dans DomoticZ.</span>
+                                            -->
+                                            <input type="number" class="form-control" style="width: 100%" id="domz_idx_txt" name="domz_idx_txt" maxlength="3" placeholder="ADCO">
+                                            <span class="help-block text-muted">DomoticZ IDX for "General - Text" device update (ADCO)</span>
+                                            <input type="number" class="form-control" style="width: 100%" id="domz_idx_p1sm" name="domz_idx_p1sm" maxlength="3" placeholder="P1 Smart Meter">
+                                            <span class="help-block text-muted">Domoticz IDX for "P1 Smart Meter - Energy" device update (BASE,0,0,0,PAPP,0)</span>
+                                            <input type="number" class="form-control" style="width: 100%" id="domz_idx_crt" name="domz_idx_crt" maxlength="3" placeholder="Current">
+                                            <span class="help-block text-muted">Domoticz IDX for "General - Current" device update (IINST)</span>
+                                            <input type="number" class="form-control" style="width: 100%" id="domz_idx_elec" name="domz_idx_elec" maxlength="3" placeholder="Electric">
+                                            <span class="help-block text-muted">Domoticz IDX for "Usage - Electric" device update (PAPP)</span>
+                                            <input type="number" class="form-control" style="width: 100%" id="domz_idx_kwh" name="domz_idx_kwh" maxlength="3" placeholder="Kwh">
+                                            <span class="help-block text-muted">Domoticz IDX for "General (Calculated) - kWh" device update (PAPP,0)</span>
+                                            <input type="number" class="form-control" style="width: 100%" id="domz_idx_pct" name="domz_idx_pct" maxlength="3" placeholder="Percentage">
+                                            <span class="help-block text-muted">Domoticz IDX for "General - Percentage" device update (IINST/ISOUSC * 100)</span>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="card-footer">
                                     <div class="text-center">
                                         <div class="btn-group">
-                                            <button type="submit" class="btn btn-default btn-warning">Enregistrer</button>
+                                            <button type="submit" class="btn btn-default btn-warning">Save</button>
                                         </div>
                                     </div>
                                 </div>
@@ -844,13 +983,15 @@
                                 <span class="fa fa-sort"></span>&nbsp;Pulse Counter<span class="pull-right fa fa-chevron-down"></span>
                             </div>
                             <div class="card-collapse collapse out" id="col_cnt">
-                                <div class="panel-body">
+                                <div class="card-block">
+
+                                    <br>
 
                                     <div class="form-group form-inline">
-                                        <label class="col-sm-3 control-label">Counter #1</label>
-                                        <div class="col-sm-9">
+                                        <strong class="col-sm-3 control-label">Counter #1</strong>
+                                        <div class="col-sm-9 form-inline">
 
-                                            <label>IO Pin</label>&nbsp;
+                                            <h6>IO Pin</h6>&nbsp;
                                             <select id="cnt_io_1" name="cnt_io_1" class="form-control">
 														<option value="255">Disabled</option>
 														<option value="2">GPIO2</option>
@@ -859,17 +1000,22 @@
 														<option value="14">GPIO14</option>
 														<option value="15">GPIO15</option>
 													</select>&nbsp;&nbsp;
-                                            <label>Debounce Delay</label> <input class="form-control" type="text" id="cnt_dly_1" name="cnt_dly_1" size="5" min="0" max="65535" maxlength="5" /> (in ms) &nbsp;&nbsp;
-                                            <label>Current Value</label> <input class="form-control" type="text" id="cnt_val_1" name="cnt_val_1" size="10" min="0" max="11165534" />
+                                            <h6>Debounce Delay</h6>&nbsp;
+                                            <div class="input-group">
+                                                <input class="form-control" type="text" id="cnt_dly_1" name="cnt_dly_1" size="5" min="0" max="65535" maxlength="5" />
+                                                <div class="input-group-addon">ms</div>
+                                            </div>&nbsp;&nbsp;
+                                            <h6>Current Value</h6>&nbsp;
+                                            <input class="form-control" type="text" id="cnt_val_1" name="cnt_val_1" size="10" min="0" max="11165534" />&nbsp;&nbsp;
                                             <button type="button" class="btn btn-default btn-warning" id="btn_cnt1">Set value</button>
                                         </div>
                                     </div>
 
                                     <div class="form-group form-inline">
-                                        <label class="col-sm-3 control-label">Counter #2</label>
-                                        <div class="col-sm-9">
+                                        <strong class="col-sm-3 control-label">Counter #2</strong>
+                                        <div class="col-sm-9 form-inline">
 
-                                            <label>IO Pin</label>&nbsp;
+                                            <h6>IO Pin</h6>&nbsp;
                                             <select id="cnt_io_1" name="cnt_io_2" class="form-control">
 														<option value="255">Disabled</option>
 														<option value="2">GPIO2</option>
@@ -878,8 +1024,13 @@
 														<option value="14">GPIO14</option>
 														<option value="15">GPIO15</option>
 													</select>&nbsp;&nbsp;
-                                            <label>Debounce Delay</label> <input class="form-control" type="text" id="cnt_dly_2" name="cnt_dly_2" size="5" min="0" max="65535" maxlength="5" /> (in ms) &nbsp;&nbsp;
-                                            <label>Current Value</label> <input class="form-control" type="text" id="cnt_val_2" name="cnt_val_2" size="10" min="0" max="11165534" />
+                                            <h6>Debounce Delay</h6>&nbsp;
+                                            <div class="input-group">
+                                                <input class="form-control" type="text" id="cnt_dly_2" name="cnt_dly_2" size="5" min="0" max="65535" maxlength="5" />
+                                                <div class="input-group-addon">ms</div>
+                                            </div>&nbsp;&nbsp;
+                                            <h6>Current Value</h6>&nbsp;
+                                            <input class="form-control" type="text" id="cnt_val_2" name="cnt_val_2" size="10" min="0" max="11165534" />&nbsp;&nbsp;
                                             <button type="button" class="btn btn-default btn-warning" id="btn_cnt1">Set value</button>
                                         </div>
                                     </div>
@@ -906,44 +1057,52 @@
                             <div class="card-collapse collapse out" id="col_advanced">
                                 <div class="card-block">
 
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Activated features</label>
+                                    <br>
+
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Activated features</strong>
                                         <div class="col-sm-9">
                                             <input class="checkbox-inline" id="cfg_debug" name="cfg_debug" type="checkbox" data-label-text="Serial Debug"> &nbsp;&nbsp;
+                                            <input class="checkbox-inline" id="cfg_logger" name="cfg_logger" type="checkbox" data-label-text="Filelogger Debug"> &nbsp;&nbsp;
+                                            <input class="checkbox-inline" id="cfg_demo" name="cfg_demo" type="checkbox" data-label-text="Demo<br>Mode"> &nbsp;&nbsp;
+                                            <br><br>
                                             <input class="checkbox-inline" id="cfg_rgb" name="cfg_rgb" type="checkbox" data-label-text="RGB Led"> &nbsp;&nbsp;
-                                            <input class="checkbox-inline" id="cfg_oled" name="cfg_oled" type="checkbox" data-label-text="Display">
+                                            <input class="checkbox-inline" id="cfg_oled" name="cfg_oled" type="checkbox" data-label-text="Display<br>&nbsp;"> &nbsp;&nbsp;
+                                            <br><br>
+                                            <input class="checkbox-inline" id="cfg_tinfo" name="cfg_tinfo" type="checkbox" data-disabled="true" data-label-text="Electric<br>Meter"> &nbsp;&nbsp;
+                                            
                                         </div>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">HTTP Authentication (SPIFFS Editor)</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">HTTP Authentication<br>(SPIFFS Editor)</strong>
                                         <div class="col-sm-9">
                                             <input type="text" class="form-control" id="http_usr" name="http_usr" placeholder="HTTP user"> &nbsp;&nbsp;
                                             <input type="password" class="form-control" id="http_pwd" name="http_pwd" placeholder="HTTP password">
-                                            <span class="help-block">Leave empty to disable HTTTP authentication.</span>
+                                            <span class="help-block text-muted">Leave empty to disable HTTTP authentication.</span>
                                         </div>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">OTA Password</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">OTA Password</strong>
                                         <div class="col-sm-9">
                                             <input type="password" class="form-control" id="ota_auth" name="ota_auth" placeholder="OTA password">
-                                            <span class="help-block">Leave empty to disable OTA authentication for updates.</span>
+                                            <span class="help-block text-muted">Leave empty to disable OTA authentication for updates.</span>
                                         </div>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">OTA TCP Port</label>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">OTA TCP Port</strong>
                                         <div class="col-sm-9">
                                             <input type="number" class="form-control" id="ota_port" name="ota_port" size="5" min="1024" max="65534" placeholder="OTA TCP Port">
                                         </div>
                                     </div>
 
                                     <div class="form-group form-inline">
-                                        <label class="col-sm-3 control-label">Led configuration</label>
-                                        <div class="col-sm-9">
+                                        <strong class="col-sm-3 control-label">Led configuration</strong>
+                                        <div class="col-sm-9 form-inline">
 
-                                            <label>Type</label>&nbsp;
+                                            <h6>Type</h6>&nbsp;
                                             <select id="cfg_led_type" name="cfg_led_type" class="form-control">
 														<option value="0">None</option>
 														<option value="1">RGB</option>
@@ -951,7 +1110,7 @@
 														<option value="3">RGBW</option>
 														<option value="4">GRBW</option>
 													</select>&nbsp;&nbsp;
-                                            <label>IO Pin</label>&nbsp;
+                                            <h6>IO Pin</h6>&nbsp;
                                             <select id="cfg_led_gpio" name="cfg_led_gpio" class="form-control">
 														<option value="255">Disabled</option>
 														<option value="0">GPIO0</option>
@@ -966,7 +1125,8 @@
 														<option value="15">GPIO15</option>
 														<option value="16">GPIO16</option>
 													</select>&nbsp;&nbsp;
-                                            <label># of LED</label> <input class="form-control" type="number" id="cfg_led_num" name="cfg_led_num" size="3" min="1" max="128" maxlength="3" />
+                                            <h6># of LED</h6>
+                                            <input class="form-control" type="number" id="cfg_led_num" name="cfg_led_num" size="3" min="1" max="128" maxlength="3" />
                                         </div>
                                     </div>
 
@@ -1045,7 +1205,7 @@
                     <h4 class="modal-title">Available Wifi networks</h4>
                 </div>
                 <div class="modal-body">
-                    <table id="tab_scan_data" class="table" data-toggle="table" data-cache="false" data-sort-name="rssi" data-sort-order="desc" data-show-refresh="true" data-show-loading="true">
+                    <table id="tab_scan_data" class="table" data-toggle="table" data-cache="false" data-sort-name="rssi" data-sort-order="desc" data-show-refresh="true" data-show-loading="true" style="font-size: 1em;">
                         <thead>
                             <tr>
                                 <th class="col-sm-5" data-field="ssid" data-sortable="true" data-formatter="SSIDFormatter">SSID</th>
@@ -1064,6 +1224,30 @@
         </div>
     </div>
     <!-- modal Wifi Scan -->
+
+    <!-- Modal Confirm Delete -->
+    <div class="modal fade" id="confirm-del" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title" id="myModalLabel">Confirmez la Suppression</h4>
+                </div>
+                <div class="modal-body">
+                    <p>You are going to delete file <span id="file2delete"></span>, this action cannot be undone.</p>
+                    <p>If this file is required by the system, you may have to re-flash the firmware to get it back.</p>
+                    <p>Are you sure to delete this file?</p>
+                    <p class="debug-url"></p>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">Nop, cancel that!</button>
+                    <button type="button" class="btn btn-danger" data-dismiss="modal" id="btn_delete" file2delete="">Yep, sure!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Modal Confirm Delete-->
 
     <!-- Modal Reconnect -->
     <div class="modal fade" id="mdl_wait" data-keyboard="false">
@@ -1087,8 +1271,10 @@
 
     <!-- Scripts devant être chargés en fin de page -->
     <!-- Librairies -->
+    <!--
     <script src="js/jquery-3.2.1.min.js"></script>
     <script src="js/jquery.terminal-1.7.2.min.js"></script>
+    <script src="js/jquery.formautofill.min.js"></script>
     <script src="js/tether.min.js"></script>
     <script src="js/bootstrap.min.js"></script>
     <script src="js/bootstrap-toggle.min.js"></script>
@@ -1098,7 +1284,8 @@
     <script src="js/reconnecting-websocket.min.js"></script>
     <script src="js/Chart.bundle.min.js"></script>
     <script src="js/notify.min.js"></script>
-
+    -->
+    <script src="js/libraries.min.js"></script>
     <!-- Main script de cette page -->
     <script src="js/main.js"></script>
 </body>

@@ -6,6 +6,7 @@ var isousc, iinst;
 var ctx_mcp3421;
 var ctx_si;
 var ctx_sh;
+var tinfo_chart;
 var si7021_chart;
 var sht10_chart;
 var mcp3421_chart;
@@ -15,7 +16,7 @@ var has_mcp3421;
 var is_local = false;
 var socksrv;
 var term;
-var logs = true;
+var logs = false; //by default
 var urls = {
     tinfo: 'tinfo',
     sensors: 'sensors',
@@ -30,68 +31,12 @@ var urls = {
     version: "version.json",
     wifiscan: "wifiscan"
 };
-var data = {
-    labels: [],
-    datasets: [
-        {
-            label: "Temperature",
-            fillColor: "rgba(77,204,51,0.2)",
-            strokeColor: "rgba(77,204,51,1)",
-            pointColor: "rgba(77,204,51,1)",
-            pointStrokeColor: "#fff",
-            pointHighlightFill: "#fff",
-            pointHighlightStroke: "rgba(77,204,51,1)"
-	   },
-        {
-            label: "Humidity",
-            fillColor: "rgba(64,149,191,0.2)",
-            strokeColor: "rgba(64,149,191,1)",
-            pointColor: "rgba(64,149,191,1)",
-            pointStrokeColor: "#fff",
-            pointHighlightFill: "#fff",
-            pointHighlightStroke: "rgba(64,149,191,1)"
-		    }
-	    ],
-    data: [{
-            type: "line",
-            axisYindex: 0
-	      },
-        {
-            type: "column",
-            axisYIndex: 1
-        }
-    ]
-};
-var data_tinfo = {
-    labels: [],
-    datasets: [
-        {
-            label: "Power",
-            fillColor: "rgba(77,204,51,0.2)",
-            strokeColor: "rgba(77,204,51,1)",
-            pointColor: "rgba(77,204,51,1)",
-            pointStrokeColor: "#fff",
-            pointHighlightFill: "#fff",
-            pointHighlightStroke: "rgba(77,204,51,1)"
-	      },
-        {
-            label: "Energy",
-            fillColor: "rgba(64,149,191,0.2)",
-            strokeColor: "rgba(64,149,191,1)",
-            pointColor: "rgba(64,149,191,1)",
-            pointStrokeColor: "#fff",
-            pointHighlightFill: "#fff",
-            pointHighlightStroke: "rgba(64,149,191,1)"
-		    }
-	    ]
-};
-
 
 function isJson(item) {
     if ((item.charAt(0) == '{' && item.slice(-1) == '}') || (item.charAt(0) == '[' && item.slice(-1) == ']'))
         return true;
     else
-        return false
+        return false;
 }
 
 function ts() {
@@ -104,11 +49,6 @@ function ts() {
     if (myDate.getSeconds() < 10) ts += '0';
     ts += myDate.getSeconds() + ' ';
     return ts;
-}
-
-function openNewTab(url) {
-    var win = window.open(url, '_blank');
-    win.focus();
 }
 
 function getActiveTab() {
@@ -147,7 +87,17 @@ function labelFormatter(value, row) {
         counters[value] = 1;
     if (flags & 0x88)
         counters[value]++;
-    return value + ' <span class=\"badge\">' + counters[value] + '</span>';
+    return value + ' <span class=\"badge badge-pill badge-secondary\">' + counters[value] + '</span>';
+}
+
+function deleteButtonMaker(value, row) {
+    var htm = '';
+
+    htm += '<button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#confirm-del" data-file2delete="' + row.na + '" >';
+    htm += 'Delete';
+    htm += '</button>';
+
+    return htm;
 }
 
 function fileFormatter(value, row) {
@@ -175,15 +125,15 @@ function SSIDFormatter(value, row) {
 
     cl = 'success';
     if (opn)
-        cl = 'eye-open';
+        cl = 'eye';
     else
         cl = 'lock';
 
     //if (enc=='WPAOpen') cl='eye-open';  
 
-    htm += "<span class='glyphicon glyphicon-" + cl + "'></span>&nbsp;" + ssid;
+    htm += "<span class='fa fa-" + cl + "'></span>&nbsp;" + ssid;
     if (!opn)
-        htm += "&nbsp;<span class='badge label-" + cl + "'> " + enc + " </span> ";
+        htm += "&nbsp;<span class='badge badge-secondary label-" + cl + "'> " + enc + " </span> ";
     htm += "</div>";
 
     return htm;
@@ -198,11 +148,11 @@ function RSSIFormatter(value, row) {
     if (signal < 70) cl = 'info';
     if (signal < 50) cl = 'warning';
     if (signal < 30) cl = 'danger';
-    cl = 'progress-bar-' + cl;
+    cl = 'bg-' + cl;
 
     htm = "<div class='progress progress-tbl'>";
     htm += "<div class='progress-bar " + cl + "' role='progressbar' aria-valuemin='0' aria-valuemax='100' ";
-    htm += "aria-valuenow='" + signal + "' style='width:" + signal + "%'>" + signal + "%</div></div>";
+    htm += "aria-valuenow='" + signal + "' style='width:" + signal + "%'><span>" + signal + "%</span></div></div>";
 
     return htm;
 }
@@ -241,9 +191,9 @@ function valueFormatter(value, row) {
         if (pe > 80) cl = 'warning';
         if (pe > 90) cl = 'danger';
 
-        cl = 'progress-bar-' + cl;
+        cl = 'bg-' + cl;
         if (pe > 0)
-            $('#scharge').text(pe + '%');
+            $('#tcharge').text(pe + '%');
         if (typeof isousc != 'undefined')
             $('#pcharge').text(iinst + 'A / ' + isousc + 'A');
         $('#pbar').attr('class', 'progress-bar ' + cl);
@@ -253,17 +203,15 @@ function valueFormatter(value, row) {
 }
 
 $.notify.addStyle('notifyhtml', {
-  html: 
-    "<div data-notify-html='html'/>"
+    html: "<div data-notify-html='html'/>"
 });
 
 function Notify(mydelay, myicon, mytype, mytitle, mymsg) {
-    $.notify(
-        {
-            html: "<div class='card card-"+mytype+"'><strong><span class='fa fa-"+myicon+"'/>&nbsp;"+mytitle+"</strong><p>"+mymsg+"</p></div>"
-        }, {
+    $.notify({
+        html: "<div class='card card-" + mytype + "'><strong><span class='fa fa-" + myicon + "'/>&nbsp;" + mytitle + "</strong><p>" + mymsg + "</p></div>"
+    }, {
         autoHideDelay: 1000 * mydelay,
-            style: 'notifyhtml'
+        style: 'notifyhtml'
     });
 }
 
@@ -300,17 +248,25 @@ function refreshTinfo(tinfo_data) {
     label += ':';
     label += sec < 10 ? '0' + sec : sec;
 
-    if (typeof ('tinfo_data.papp_iinst') != 'undefined')
+    if (typeof (tinfo_data.papp_iinst) != 'undefined')
         tinfo_papp_iinst = tinfo_data.papp_iinst[0];
 
     if (typeof (tinfo_papp_iinst) != 'undefined' && tinfo_papp_iinst.seen >= 0) {
-        $("#sp_tinfo_papp").text(parseInt(tinfo_papp_iinst.papp) + 'W');
-        $("#sp_tinfo_iinst").text(parseInt(tinfo_papp_iinst.iinst) + 'A');
+        $("#sp_tinfo_papp_iinst_state").text("");
+        $("#col_tinfo_papp_iinst").removeClass('in').addClass('show');
+        $("#sp_tinfo_papp").text(parseInt(tinfo_papp_iinst.PAPP) + 'W');
+        $("#sp_tinfo_iinst").text(parseInt(tinfo_papp_iinst.IINST) + 'A');
 
-        if (tinfo_papp_iinst_chart.datasets[0].points.length >= 20)
-            tinfo_papp_iinst_chart.removeData()
-        tinfo_papp_iinst_chart.addData([parseInt(tinfo_papp_iinst.papp), parseInt(tinfo_papp_iinst.iinst)], label);
-        tinfo_papp_iinst_chart.update();
+        if (tinfo_chart.data.datasets[0].data.length >= 20) {
+            tinfo_chart.data.labels.shift();
+            tinfo_chart.data.datasets[0].data.shift();
+            tinfo_chart.data.datasets[1].data.shift();
+        }
+
+        tinfo_chart.data.labels.push(label);
+        tinfo_chart.data.datasets[0].data.push(parseInt(tinfo_papp_iinst.PAPP));
+        tinfo_chart.data.datasets[1].data.push(parseInt(tinfo_papp_iinst.IINST));
+        tinfo_chart.update();
     } else {
         if ($("#sp_tinfo_papp_iinst_state").text() != lbltext) {
             $("#sp_tinfo_papp_iinst_state").text(lbltext);
@@ -318,7 +274,7 @@ function refreshTinfo(tinfo_data) {
         }
     }
 
-    if (typeof ('tinfo_data.tinfo') != 'undefined')
+    if (typeof (tinfo_data.tinfo) != 'undefined')
         $('#tab_tinfo_data').bootstrapTable('load', tinfo_data.tinfo);
 
 }
@@ -340,21 +296,31 @@ function refreshSensors(sensors_data) {
     label += ':';
     label += sec < 10 ? '0' + sec : sec;
 
-    if (typeof ('sensors_data.si7021') != 'undefined')
+    if (typeof (sensors_data.si7021) != 'undefined')
         si7021 = sensors_data.si7021[0];
-    if (typeof ('sensors_data.sht10') != 'undefined')
+    if (typeof (sensors_data.sht10) != 'undefined')
         sht10 = sensors_data.sht10[0];
-    if (typeof ('sensors_data.mcp3421') != 'undefined')
+    if (typeof (sensors_data.mcp3421) != 'undefined')
         mcp3421 = sensors_data.mcp3421[0];
 
     if (typeof (mcp3421) != 'undefined' && mcp3421.seen >= 0) {
         $("#sp_mcp3421_state").text('');
+
+        if ($("#col_mcp3421").hasClass('in') && !$("#col_si7021").hasClass('in') && !$("#col_sht10").hasClass('in')) {
+            $("#col_mcp3421").removeClass('in').addClass('show');
+        }
+
         $("#sp_mcp3421_pwr").text(mcp3421.power + ' W');
-        if (mcp3421_chart.datasets[0].points.length >= 20)
-            mcp3421_chart.removeData()
-        mcp3421_chart.addData([mcp3421.power], label);
+
+        if (mcp3421_chart.data.datasets[0].data.length >= 20) {
+            mcp3421_chart.data.labels.shift();
+            mcp3421_chart.data.datasets[0].data.shift();
+        }
+
+        mcp3421_chart.data.labels.push(label);
+        mcp3421_chart.data.datasets[0].data.push(mcp3421.power);
         mcp3421_chart.update();
-        mcp3421_gauge.set(Number(mcp3421.power));
+        //mcp3421_gauge.set(Number(mcp3421.power));
     } else {
         if ($("#sp_mcp3421_state").text() != lbltext) {
             $("#sp_mcp3421_state").text(lbltext);
@@ -364,12 +330,24 @@ function refreshSensors(sensors_data) {
 
 
     if (typeof (si7021) != 'undefined' && si7021.seen >= 0) {
-        $("#sp_si7021_temp").text(si7021.temperature + '°C');
-        $("#sp_si7021_hum").text(si7021.humidity + '%');
+        $("#sp_si7021_state").text('');
 
-        if (si7021_chart.datasets[0].points.length >= 20)
-            si7021_chart.removeData()
-        si7021_chart.addData([si7021.temperature, si7021.humidity], label);
+        if (!$("#col_mcp3421").hasClass('in') && $("#col_si7021").hasClass('in') && !$("#col_sht10").hasClass('in')) {
+            $("#col_si7021").removeClass('in').addClass('show');
+        }
+
+        $("#sp_si7021_temp").text(parseFloat(si7021.temperature).toFixed(2) + '°C');
+        $("#sp_si7021_hum").text(parseFloat(si7021.humidity).toFixed(2) + '%');
+
+        if (si7021_chart.data.datasets[0].data.length >= 20) {
+            si7021_chart.data.labels.shift();
+            si7021_chart.data.datasets[0].data.shift();
+            si7021_chart.data.datasets[1].data.shift();
+        }
+
+        si7021_chart.data.labels.push(label);
+        si7021_chart.data.datasets[0].data.push(si7021.temperature);
+        si7021_chart.data.datasets[1].data.push(si7021.humidity);
         si7021_chart.update();
     } else {
         if ($("#sp_si7021_state").text() != lbltext) {
@@ -380,11 +358,23 @@ function refreshSensors(sensors_data) {
 
     if (typeof (sht10) != 'undefined' && sht10.seen >= 0) {
         $("#sp_sht10_state").text('');
-        $("#sp_sht10_temp").text(sht10.temperature + '°C');
-        $("#sp_sht10_hum").text(sht10.humidity + '%');
-        if (sht10_chart.datasets[0].points.length >= 20)
-            sht10_chart.removeData()
-        sht10_chart.addData([sht10.temperature, sht10.humidity], label);
+
+        if (!$("#col_mcp3421").hasClass('in') && !$("#col_si7021").hasClass('in') && $("#col_sht10").hasClass('in')) {
+            $("#col_sht10").removeClass('in').addClass('show');
+        }
+
+        $("#sp_sht10_temp").text(parseFloat(sht10.temperature).toFixed(2) + '°C');
+        $("#sp_sht10_hum").text(parseFloat(sht10.humidity).toFixed(2) + '%');
+
+        if (sht10_chart.data.datasets[0].data.length >= 20) {
+            sht10_chart.data.labels.shift();
+            sht10_chart.data.datasets[0].data.shift();
+            sht10_chart.data.datasets[1].data.shift();
+        }
+
+        sht10_chart.data.labels.push(label);
+        sht10_chart.data.datasets[0].data.push(si7021.temperature);
+        sht10_chart.data.datasets[1].data.push(si7021.humidity);
         sht10_chart.update();
     } else {
         if ($("#sp_sht10_state").text() != lbltext) {
@@ -394,9 +384,31 @@ function refreshSensors(sensors_data) {
     }
 }
 
+$('#pan_edit_mM').click(function () {
+    var card = $('#pan_edit');
+    var span = $(this);
+
+    if (!card.hasClass('fullscreen')) { //Going to maximize
+        span.removeClass('fa-window-maximize').addClass('fa-window-minimize');
+        card.addClass('fullscreen');
+    } else { //Going to minimize
+        span.removeClass('fa-window-minimize').addClass('fa-window-maximize');
+        card.removeClass('fullscreen');
+    }
+
+});
+
 function refreshSystem(system_data) {
     console.log('refreshSystem=' + system_data);
     $('#tab_sys_data').bootstrapTable('load', system_data);
+}
+
+function refreshLogger(logger_data) {
+    console.log('refreshLogger=' + logger_data);
+    $('#tab_log_data').bootstrapTable('load', logger_data);
+    $('#tab_log_data').on('refresh.bs.table', function (e) {
+        wsSend('$logger')
+    });
 }
 
 function wsSend(message) {
@@ -439,6 +451,46 @@ function scanWifi() {
         })
 }
 
+function refreshSpiffs() {
+    wsSend('$spiffs');
+    $.getJSON(urls['spiffs'], function (spiffs_data) {
+            console.log("trying to parse spiffs_data..")
+            var pb, pe, cl;
+            total = spiffs_data.spiffs[0].Total;
+            used = spiffs_data.spiffs[0].Used;
+            freeram = spiffs_data.spiffs[0].Ram;
+
+            $('#tab_fs_data').bootstrapTable('load', spiffs_data.files, {
+                silent: true,
+                showLoading: true
+            });
+
+            pe = parseInt(used * 100 / total);
+            if (isNaN(pe))
+                pe = 0;
+            cl = 'success';
+            if (pe > 70) cl = 'warning';
+            if (pe > 85) cl = 'danger';
+
+            cl = 'bg-' + cl;
+            if (pe > 0)
+                $('#sspiffs').text(pe + '%');
+            $('#fs_use').text(formatSize(used) + ' / ' + formatSize(total));
+            $('#pfsbar').attr('class', 'progress-bar ' + cl);
+            $('#pfsbar').css('width', pe + '%');
+
+        })
+        .fail(function () {
+            console.log("error while requestiong SPIFFS data");
+        })
+
+    $.getJSON(urls['version'], function (spiffs_version) {
+        var v = "SPIFFS v" + spiffs_version.version + '.' + spiffs_version.build;
+        console.log('spiffs version=' + v);
+        $("#spiffs_version").html(v);
+    })
+}
+
 // We clicked on a tab 
 $('a[data-toggle=\"tab\"]').on('shown.bs.tab', function (e) {
     var target = $(e.target).attr("href")
@@ -458,6 +510,7 @@ $('a[data-toggle=\"tab\"]').on('shown.bs.tab', function (e) {
 
     } else if (target == '#tab_sensor') {
         wsSend('$sensors:' + $('#sensors_sld_rfh').slider('getValue'));
+        $("#led_panel").slider('relayout');
         //$('#sensors_sld_rfh').redraw();
         //$('#si7021_chart').redraw();
         //$('#sht10_chart').redraw();
@@ -466,49 +519,16 @@ $('a[data-toggle=\"tab\"]').on('shown.bs.tab', function (e) {
         //$('#tab_sys_data').bootstrapTable('refresh',{silent:true, url:urls['system']});  
         wsSend('$system');
     } else if (target == '#tab_log') {
-        onBodyLoad
-        wsSend('$log');
+        //Populate the datagrid with log file content (from json)
+        wsSend('$logger');
+        //onBodyLoad
+        //wsSend('$log');
     } else if (target == '#tab_edit') {
-        onBodyLoad();
+        //TODO: Implement the Edit within a tab?
+        $("#tab_edit_frm").attr("src", "/edit.htm");
+        //onBodyLoad();
     } else if (target == '#tab_fs') {
-        wsSend('$spiffs');
-        $.getJSON(urls['spiffs'], function (spiffs_data) {
-                var pb, pe, cl;
-                total = spiffs_data.spiffs[0].Total;
-                used = spiffs_data.spiffs[0].Used;
-                freeram = spiffs_data.spiffs[0].Ram;
-
-                $('#tab_fs_data').bootstrapTable('load', spiffs_data.files, {
-                    silent: true,
-                    showLoading: true
-                });
-
-                pe = parseInt(used * 100 / total);
-                if (isNaN(pe))
-                    pe = 0;
-                cl = 'success';
-                if (pe > 70) cl = 'warning';
-                if (pe > 85) cl = 'danger';
-
-                cl = 'progress-bar-' + cl;
-                if (pe > 0)
-                    $('#sspiffs').text(pe + '%');
-                $('#fs_use').text(formatSize(used) + ' / ' + formatSize(total));
-                $('#pfsbar').attr('class', 'progress-bar ' + cl);
-                $('#pfsbar').css('width', pe + '%');
-
-            })
-            .fail(function () {
-                console.log("error while requestiong SPIFFS data");
-            })
-
-        $.getJSON(urls['version'], function (spiffs_version) {
-            var v = "Web V" + spiffs_version.version + '.' + spiffs_version.build;
-            console.log('spiffs version=' + v);
-            $("#spiffs_version").html(v);
-        })
-
-
+        refreshSpiffs();
         // Configuration Tab activation
     } else if (target == '#tab_cfg') {
         //socket.emit('config', true);
@@ -516,11 +536,13 @@ $('a[data-toggle=\"tab\"]').on('shown.bs.tab', function (e) {
         $.getJSON(urls['config'], function (data) {
 
                 var tinfo_edf = data["tinfo_edf"] == 1 ? true : false;
+                var tinfo_dsm = data["tinfo_dsm"] == 1 ? true : false;
                 var sens_si7021 = data["sens_si7021"] == 1 ? true : false;
                 var sens_sht10 = data["sens_sht10"] == 1 ? true : false;
                 var sens_mcp3421 = data["sens_mcp3421"] == 1 ? true : false;
 
                 var has_tinfo_edf = data["has_tinfo_edf"] == 1 ? true : false;
+                var has_tinfo_dsm = data["has_tinfo_dsm"] == 1 ? true : false;
                 var has_si7021 = data["has_si7021"] == 1 ? true : false;
                 var has_sht10 = data["has_sht10"] == 1 ? true : false;
                 var has_mcp3421 = data["has_mcp3421"] == 1 ? true : false;
@@ -529,12 +551,15 @@ $('a[data-toggle=\"tab\"]').on('shown.bs.tab', function (e) {
                 var cfg_ap = data["cfg_ap"] == 1 ? true : false;
                 var cfg_wifi = data["cfg_wifi"] == 1 ? true : false;
                 var cfg_debug = data["cfg_debug"] == 1 ? true : false;
+                var cfg_logger = data["cfg_logger"] == 1 ? true : false;
+                var cfg_tinfo = data["cfg_tinfo"] == 1 ? true : false;
+                var cfg_demo = data["cfg_demo"] == 1 ? true : false;
                 var cfg_rgb = data["cfg_rgb"] == 1 ? true : false;
                 var cfg_oled = data["cfg_oled"] == 1 ? true : false;
                 var cfg_static = data["cfg_static"] == 1 ? true : false;
 
-                var tinfo_pwr_led = JSON.parse("[" + data["tinfo_pwr_led"] + "]");
-                var tinfo_nrj_led = JSON.parse("[" + data["tinfo_nrj_led"] + "]");
+                //var tinfo_pwr_led = JSON.parse("[" + data["tinfo_pwr_led"] + "]");
+                //var tinfo_nrj_led = JSON.parse("[" + data["tinfo_nrj_led"] + "]");
                 var sens_temp_led = JSON.parse("[" + data["sens_temp_led"] + "]");
                 var sens_hum_led = JSON.parse("[" + data["sens_hum_led"] + "]");
                 var sens_pwr_led = JSON.parse("[" + data["sens_pwr_led"] + "]");
@@ -551,6 +576,13 @@ $('a[data-toggle=\"tab\"]').on('shown.bs.tab', function (e) {
                     onColor: has_tinfo_edf ? "success" : "warning",
                     offColor: has_tinfo_edf ? "danger" : "warning"
                 });
+
+                $("#tinfo_dsm").bootstrapSwitch({
+                    state: tinfo_dsm,
+                    onColor: has_tinfo_dsm ? "success" : "warning",
+                    offColor: has_tinfo_dsm ? "danger" : "warning"
+                });
+                /*
                 $("#tinfo_pwr_led").slider({
                     id: "tinfo_pwr_led",
                     value: tinfo_pwr_led,
@@ -565,7 +597,7 @@ $('a[data-toggle=\"tab\"]').on('shown.bs.tab', function (e) {
                         return sliderFormatter('tinfo', v, 'led', 'A');
                     }
                 });
-
+                */
                 $("#sens_temp_led").slider({
                     id: "slider_temp_led",
                     value: sens_temp_led,
@@ -627,18 +659,26 @@ $('a[data-toggle=\"tab\"]').on('shown.bs.tab', function (e) {
                 $("#cfg_ap").bootstrapSwitch('state', cfg_ap);
                 $("#cfg_wifi").bootstrapSwitch('state', cfg_wifi);
                 $("#cfg_debug").bootstrapSwitch('state', cfg_debug);
+                $("#cfg_logger").bootstrapSwitch('state', cfg_logger);
                 $("#cfg_rgb").bootstrapSwitch('state', cfg_rgb);
+                $("#cfg_demo").bootstrapSwitch('state', cfg_demo);
+                $("#cfg_tinfo").bootstrapSwitch('state', cfg_tinfo);
+                $("#cfg_tinfo").bootstrapSwitch('disabled', true);
                 $("#cfg_static").bootstrapSwitch('state', cfg_static);
             })
             .fail(function (xhr, textStatus, errorThrown) {
                 Notify(2, 'exclamation-triangle', 'warning', 'Error while getting configuration', xhr.status + ' ' + errorThrown);
             })
+
         //$('#tab_scan_data').bootstrapTable('refresh',{silent:true, showLoading:true, url:'/wifiscan.json'});  
     }
 });
 
 $('#tab_sys_data').on('load-success.bs.table', function (e, data) {
     console.log('#tab_sys_data loaded');
+})
+$('#tab_log_data').on('load-success.bs.table', function (e, data) {
+    console.log('#tab_log_data loaded');
 })
 $('#tab_fs_data')
     .on('load-success.bs.table', function (e, data) {
@@ -651,11 +691,37 @@ $('#tab_fs_data')
 $('#btn_scan').click(function () {
     scanWifi();
 });
+
+$('#confirm-del').on('show.bs.modal', function (event) {
+    var button = $(event.relatedTarget) // Button that triggered the modal
+    var file2delete = button.data('file2delete') // Extract info from data-* attributes
+    var modal = $(this)
+    modal.find('#file2delete').text(file2delete)
+    modal.find('#btn_delete').attr("file2delete", file2delete)
+});
+
+$('#btn_delete').click(function () {
+    var $btn = $(this).button('...');
+
+    $.post('/spiffs_op', {
+            action: "delete",
+            file: $btn.attr("file2delete")
+        },
+        function (msg, textStatus, xhr) {
+            Notify(2, 'ok', 'success', 'Suppression effectuée', xhr.status + ' ' + msg);
+        }).fail(
+        function (xhr, textStatus, errorThrown) {
+            Notify(4, 'remove', 'danger', 'Erreur lors de la suppression', xhr.status + ' ' + errorThrown);
+        });
+    refreshSpiffs();
+});
+
 $('#btn_reset').click(function () {
     $.post(urls['factory_reset']);
     waitReboot();
     return false;
 });
+
 $('#btn_reboot').click(function () {
     $.post(urls['reset']);
     waitReboot();
@@ -683,15 +749,15 @@ $(document)
             label = input.val().replace(/\\/g, '/').replace(/.*\//, '');
         input.trigger('fileselect', [numFiles, label]);
     })
-    .on('hide.bs.collapse', '.panel-collapse', function (e) {
-        var $span = $(this).parents('.panel').find('span.pull-right.glyphicon');
-        $span.removeClass('glyphicon-chevron-up').addClass('glyphicon-chevron-down');
+    .on('hide.bs.collapse', '.card-collapse', function (e) {
+        var $span = $(this).parents('.card').find('span.pull-right.fa');
+        $span.removeClass('fa-chevron-up').addClass('fa-chevron-down');
     })
-    .on('show.bs.collapse', '.panel-collapse', function (e) {
-        var $span = $(this).parents('.panel').find('span.pull-right.glyphicon');
-        $span.removeClass('glyphicon-chevron-down').addClass('glyphicon-chevron-up');
+    .on('show.bs.collapse', '.card-collapse', function (e) {
+        var $span = $(this).parents('.card').find('span.pull-right.fa');
+        $span.removeClass('fa-chevron-down').addClass('fa-chevron-up');
     })
-    .on('shown.bs.collapse', '.panel-collapse', function (e) {
+    .on('shown.bs.collapse', '.card-collapse', function (e) {
         if (e.currentTarget.id == 'col_sht10') {
             sht10_chart.resize();
             sht10_chart.update();
@@ -701,6 +767,8 @@ $(document)
         } else if (e.currentTarget.id == 'col_mcp3421') {
             mcp3421_chart.resize();
             mcp3421_chart.update();
+        } else if (e.currentTarget.id == 'col_sensors') {
+            $("#cfg_led_bright").slider('relayout');
         }
     });
 
@@ -784,7 +852,7 @@ $('#btn_upload_fw').click(function () {
             waitReboot();
         },
         error: function (xhr, textStatus, errorThrown) {
-            $('#pfw').removeClass('progress-bar-success').addClass('progress-bar-danger');
+            $('#pfw').removeClass('bg-success').addClass('bg-danger');
             Notify(4, 'minus-circle', 'danger', 'Error while upgradding file ' + name, '<strong>' + xhr.status + '</strong> ' + errorThrown);
         }
     });
@@ -836,7 +904,7 @@ window.onload = function () {
     );
 
     // open a web socket
-    socksrv = 'ws://'+location.hostname+':'+location.port+'/ws';
+    socksrv = 'ws://' + location.hostname + ':' + location.port + '/ws';
     //socksrv = 'ws://' + '192.168.1.45' + ':' + '80' + '/ws';
     console.log('socket server=' + socksrv);
     //ws = new WebSocket("ws://localhost:8081");
@@ -850,18 +918,18 @@ window.onload = function () {
         //Notify(1, 'eye-open', 'success', 'Connected to nrjmeter', '');
         //$('.nav-tabs a[href=#'+document.location.toString().split('#')[1]+']').tab('show');  
         $('#mdl_wait').modal('hide');
-        $('#connect').text('connected').removeClass('badge-default').addClass('badge-success');
+        $('#connect').text('connected').removeClass('badge-default').removeClass('badge-danger').addClass('badge-success');
         var srv = location.hostname;
         term.echo("WS[Connected] to [[;green;]ws:/" + srv + ':' + location.port + "/ws]");
         term.set_prompt("[[b;green;]" + srv + " #]");
         elapsed = 0;
         clearInterval(el_timer);
-        //refreshPage();
+        refreshPage();
     };
 
     // When websocket is closed.
     ws.onclose = function (code, reason) {
-        $('#connect').text('disconnected').removeClass('badge-success').addClass('badge-danger');
+        $('#connect').text('disconnected').removeClass('badge-success').removeClass('badge-default').addClass('badge-danger');
         term.error('WS[Disconnected] ' + code + ' ' + reason);
         term.set_prompt("[[b;red;]>]");
     };
@@ -886,6 +954,8 @@ window.onload = function () {
                 refreshSensors(data);
             if (msg == 'system')
                 refreshSystem(data);
+            if (msg == 'logger')
+                refreshLogger(data);
             if (msg == 'config') {
                 $('#led_panel').slider('setValue', data[0].ledpanel)
                 console.log("WS received config ledpanel=" + data[0].ledpanel);
@@ -954,6 +1024,10 @@ window.onload = function () {
         onColor: "success",
         offColor: "danger"
     });
+    $("#cfg_logger").bootstrapSwitch({
+        onColor: "success",
+        offColor: "danger"
+    });
     $("#cfg_rgb").bootstrapSwitch({
         onColor: "success",
         offColor: "danger"
@@ -972,48 +1046,26 @@ window.onload = function () {
         offColor: "danger"
     });
 
-    //New chart
-    /*
-var data_tinfo = {
-    labels: [],
-    datasets: [
-        {
-            label: "Power",
-            fillColor: "rgba(77,204,51,0.2)",
-            strokeColor: "rgba(77,204,51,1)",
-            pointColor: "rgba(77,204,51,1)",
-            pointStrokeColor: "#fff",
-            pointHighlightFill: "#fff",
-            pointHighlightStroke: "rgba(77,204,51,1)"
-	      },
-        {
-            label: "Energy",
-            fillColor: "rgba(64,149,191,0.2)",
-            strokeColor: "rgba(64,149,191,1)",
-            pointColor: "rgba(64,149,191,1)",
-            pointStrokeColor: "#fff",
-            pointHighlightFill: "#fff",
-            pointHighlightStroke: "rgba(64,149,191,1)"
-		    }
-	    ]
-};
-    */
     var ctx_tinfo_papp_iinst = document.getElementById("tinfo_papp_iinst_chart").getContext('2d');
-    var o_tinfo_papp_iinst_chart = new Chart(ctx_tinfo_papp_iinst, {
-        "type": "line",
+    tinfo_chart = new Chart(ctx_tinfo_papp_iinst, {
+        "type": "bar",
         "data": {
-            "labels": ["January", "February", "March", "April"],
+            "labels": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
             "datasets": [{
                 "label": "Power (W)",
-                "data": [10, 20, 30, 40],
-                "borderColor": "rgb(255, 99, 132)",
-                "backgroundColor": "rgba(255, 99, 132, 0.2)"
+                "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                yAxisID: 'W',
+                type: 'line',
+                "borderColor": "rgba(77, 204, 51, 1)",
+                "backgroundColor": "rgba(77, 204, 51, 0.2)"
             }, {
                 "label": "Energy (A)",
-                "data": [50, 50, 50, 50],
+                "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                yAxisID: 'A',
                 "type": "bar",
-                "fill": false,
-                "borderColor": "rgb(54, 162, 235)"
+                "fill": true,
+                "borderColor": "rgba(64, 149, 191, 1)",
+                "backgroundColor": "rgba(64, 149, 191, 0.2)"
             }]
         },
         "options": {
@@ -1024,6 +1076,9 @@ var data_tinfo = {
                         "id": 'W',
                         "type": 'linear',
                         "position": 'left',
+                        "gridLines": {
+                            "display": false
+                        },
                         "ticks": {
                             "beginAtZero": true
                         }
@@ -1032,6 +1087,9 @@ var data_tinfo = {
                         "id": 'A',
                         "type": 'linear',
                         "position": 'right',
+                        "gridLines": {
+                            "display": false
+                        },
                         "ticks": {
                             "beginAtZero": true
                         }
@@ -1039,32 +1097,186 @@ var data_tinfo = {
             }
         }
     });
-    ///
 
+    ctx_mcp3421 = $("#mcp3421_chart").get(0).getContext("2d");
+    mcp3421_chart = new Chart(ctx_mcp3421, {
+        "type": "bar",
+        "data": {
+            "labels": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+            "datasets": [{
+                "label": "Power (W)",
+                "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                yAxisID: 'W',
+                type: 'line',
+                "borderColor": "rgba(77, 204, 51, 1)",
+                "backgroundColor": "rgba(77, 204, 51, 0.2)"
+            }]
+        },
+        "options": {
+            responsive: true,
+            "scales": {
+                "yAxes": [
+                    {
+                        "id": 'W',
+                        "type": 'linear',
+                        "position": 'left',
+                        "gridLines": {
+                            "display": false
+                        },
+                        "ticks": {
+                            "min": 0,
+                            "beginAtZero": true
+                        }
+                }]
+            }
+        }
+    });
+
+    ctx_si = $("#si7021_chart").get(0).getContext("2d");
+    si7021_chart = new Chart(ctx_si, {
+        "type": "bar",
+        "data": {
+            "labels": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+            "datasets": [{
+                "label": "Temperature (°C)",
+                "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                yAxisID: 'C',
+                type: 'line',
+                "borderColor": "rgba(77, 204, 51, 1)",
+                "backgroundColor": "rgba(77, 204, 51, 0.2)"
+            }, {
+                "label": "Humidity (%)",
+                "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                yAxisID: 'P',
+                "type": "bar",
+                "fill": true,
+                "borderColor": "rgba(64, 149, 191, 1)",
+                "backgroundColor": "rgba(64, 149, 191, 0.2)"
+            }]
+        },
+        "options": {
+            responsive: true,
+            "scales": {
+                "yAxes": [
+                    {
+                        "id": 'C',
+                        "type": 'linear',
+                        "position": 'left',
+                        "gridLines": {
+                            "display": false
+                        },
+                        "ticks": {
+                            "min": 0,
+                            "max": 100,
+                            "beginAtZero": true
+                        }
+                },
+                    {
+                        "id": 'P',
+                        "type": 'linear',
+                        "position": 'right',
+                        "gridLines": {
+                            "display": false
+                        },
+                        "ticks": {
+                            "min": 0,
+                            "max": 100,
+                            "beginAtZero": true
+                        }
+                }]
+            }
+        }
+    });
+
+    ctx_sh = $("#sht10_chart").get(0).getContext("2d");
+    sht10_chart = new Chart(ctx_sh, {
+        "type": "bar",
+        "data": {
+            "labels": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+            "datasets": [{
+                "label": "Temperature (°C)",
+                "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                yAxisID: 'C',
+                type: 'line',
+                "borderColor": "rgba(77, 204, 51, 1)",
+                "backgroundColor": "rgba(77, 204, 51, 0.2)"
+            }, {
+                "label": "Humidity (%)",
+                "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                yAxisID: 'P',
+                "type": "bar",
+                "fill": true,
+                "borderColor": "rgba(64, 149, 191, 1)",
+                "backgroundColor": "rgba(64, 149, 191, 0.2)"
+            }]
+        },
+        "options": {
+            responsive: true,
+            "scales": {
+                "yAxes": [
+                    {
+                        "id": 'C',
+                        "type": 'linear',
+                        "position": 'left',
+                        "gridLines": {
+                            "display": false
+                        },
+                        "ticks": {
+                            "min": 0,
+                            "max": 100,
+                            "beginAtZero": true
+                        }
+                },
+                    {
+                        "id": 'P',
+                        "type": 'linear',
+                        "position": 'right',
+                        "gridLines": {
+                            "display": false
+                        },
+                        "ticks": {
+                            "min": 0,
+                            "max": 100,
+                            "beginAtZero": true
+                        }
+                }]
+            }
+        }
+    });
     /*
-	var ctx_tinfo_papp_iinst = $("#tinfo_papp_iinst_chart").get(0).getContext("2d");
-  tinfo_papp_iinst_chart = new Chart(ctx_tinfo_papp_iinst).Line(data_tinfo, { 
-										  	responsive: true, 
-												scaleOverride: true, 
-												scaleSteps: 5, 
-												scaleStepWidth: 100, 
-												scaleStartValue: 0, 
-												scaleLabel: "<%=value%> W" });
+	var data = {
+    labels: [],
+    datasets: [
+        {
+            label: "Temperature",
+            fillColor: "rgba(77,204,51,0.2)",
+            strokeColor: "rgba(77,204,51,1)",
+            pointColor: "rgba(77,204,51,1)",
+            pointStrokeColor: "#fff",
+            pointHighlightFill: "#fff",
+            pointHighlightStroke: "rgba(77,204,51,1)"
+	   },
+        {
+            label: "Humidity",
+            fillColor: "rgba(64,149,191,0.2)",
+            strokeColor: "rgba(64,149,191,1)",
+            pointColor: "rgba(64,149,191,1)",
+            pointStrokeColor: "#fff",
+            pointHighlightFill: "#fff",
+            pointHighlightStroke: "rgba(64,149,191,1)"
+		    }
+	    ],
+    data: [{
+            type: "line",
+            axisYindex: 0
+	      },
+        {
+            type: "column",
+            axisYIndex: 1
+        }
+    ]
+};
 	
-	
-	var ctx_mcp3421 = $("#mcp3421_chart").get(0).getContext("2d");
-  mcp3421_chart = new Chart(ctx_mcp3421).Line(data, { 
-										  	responsive: true, 
-												scaleOverride: true, 
-												scaleSteps: 5, 
-												scaleStepWidth: 100, 
-												scaleStartValue: 0, 
-												scaleLabel: "<%=value%> W" });
-
-	var ctx_si = $("#si7021_chart").get(0).getContext("2d");
-	si7021_chart = new Chart(ctx_si).Line(data, {responsive: true});
-  var ctx_sh = $("#sht10_chart").get(0).getContext("2d");
-  sht10_chart = new Chart(ctx_sh).Line(data, {responsive: true});
   */
     /*
       mcp3421_gauge = new Gauge(document.getElementById('mcp3421_gauge')).setOptions( {
@@ -1082,10 +1294,6 @@ var data_tinfo = {
     	mcp3421_gauge.set(1); // set actual value
     */
 
-    //mcp3421_chart = new Chart(ctx_mcp3421, { type: 'line', data: data, options: { responsive: true }});
-    //si7021_chart  = new Chart(ctx_si,      { type: 'line', data: data, options: { responsive: true }});
-    //sht10_chart   = new Chart(ctx_sh,      { type: 'line', data: data, options: { responsive: true }});
-
     //refreshSensors();
-    refreshPage();
+    //refreshPage();
 }
