@@ -67,34 +67,53 @@ extern const char CFG_MASK[]		;
 extern const char CFG_DNS[]			;
 extern const char CFG_EEP_DUMP[];
 
+extern const char CFG_MQTT_HOST[];
+extern const char CFG_MQTT_PORT[];
+extern const char CFG_MQTT_USR[];
+extern const char CFG_MQTT_PWD[];
+
+extern const char CFG_MQTT_INT[];
+extern const char CFG_MQTT_OUT[];
+extern const char CFG_MQTT_QOS[];
+extern const char CFG_MQTT_RET[];
+extern const char CFG_MQTT_VER[];
 
 extern const char CFG_AP_PSK[] 		 ;
 extern const char CFG_AP_SSID[] 	 ;
-extern const char CFG_HTTP_USR[]    ;
-extern const char CFG_HTTP_PWD[]    ;
+extern const char CFG_HTTP_USR[]   ;
+extern const char CFG_HTTP_PWD[]   ;
 extern const char CFG_OTA_AUTH[] 	 ;
 extern const char CFG_OTA_PORT[] 	 ;
 
 extern const char CFG_EMON_HOST[]  ;
 extern const char CFG_EMON_PORT[]  ;
 extern const char CFG_EMON_URL[] 	 ;
+extern const char CFG_EMON_TOPIC[] ;
 extern const char CFG_EMON_KEY[] 	 ;
 extern const char CFG_EMON_NODE[]  ;
 extern const char CFG_EMON_FREQ[]  ;
+extern const char CFG_EMON_HTTP[]  ;
+extern const char CFG_EMON_MQTT[]  ;
 
 extern const char CFG_JDOM_HOST[] ;
 extern const char CFG_JDOM_PORT[] ;
 extern const char CFG_JDOM_URL[]  ;
+extern const char CFG_JDOM_TOPIC[];
 extern const char CFG_JDOM_KEY[]  ;
 extern const char CFG_JDOM_ADCO[] ;
 extern const char CFG_JDOM_FREQ[] ;
+extern const char CFG_JDOM_HTTP[] ;
+extern const char CFG_JDOM_MQTT[] ;
 
 extern const char CFG_DOMZ_HOST[]  ; 
 extern const char CFG_DOMZ_PORT[]  ;
 extern const char CFG_DOMZ_URL[]   ;
+extern const char CFG_DOMZ_TOPIC[] ;
 extern const char CFG_DOMZ_USER[]  ;
 extern const char CFG_DOMZ_PASS[]  ;
-/*extern const char CFG_DOMZ_INDEX[] ;*/
+extern const char CFG_DOMZ_IDX_MCP3421[] ;
+extern const char CFG_DOMZ_IDX_SI7021[] ;
+extern const char CFG_DOMZ_IDX_SHT10[] ;
 extern const char CFG_DOMZ_IDX_TXT[] ;
 extern const char CFG_DOMZ_IDX_P1SM[] ;
 extern const char CFG_DOMZ_IDX_CRT[] ;
@@ -102,6 +121,8 @@ extern const char CFG_DOMZ_IDX_ELEC[] ;
 extern const char CFG_DOMZ_IDX_KWH[] ;
 extern const char CFG_DOMZ_IDX_PCT[] ;
 extern const char CFG_DOMZ_FREQ[]  ;
+extern const char CFG_DOMZ_HTTP[]  ;
+extern const char CFG_DOMZ_MQTT[]  ;
 
 extern const char CFG_COUNT1_GPIO[]  ;
 extern const char CFG_COUNT2_GPIO[]  ;
@@ -138,6 +159,7 @@ extern const char CFG_CFG_OLED[] 		;
 extern const char CFG_CFG_TINFO[]   ;
 extern const char CFG_CFG_DEMO[]    ;
 extern const char CFG_CFG_STATIC[]	;
+extern const char CFG_CFG_MQTT[]    ;
 extern const char CFG_CFG_SHT10[]	  ;
 extern const char CFG_CFG_SI7021[]  ;
 extern const char CFG_CFG_MCP3421[] ;
@@ -147,6 +169,7 @@ extern const char CFG_CFG_HASOLED[] ;
 extern const char HELP_HELP[];
 extern const char HELP_SYS[];
 extern const char HELP_WIFI[];
+extern const char HELP_MQTT[];
 extern const char HELP_TINFO[];
 extern const char HELP_DATA[];
 extern const char HELP_JEEDOM[];

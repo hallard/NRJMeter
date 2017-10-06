@@ -786,23 +786,32 @@ void confJSONTable(AsyncWebServerRequest * request)
   root[FPSTR(CFG_EMON_HOST)] = config.emoncms.host;
   root[FPSTR(CFG_EMON_PORT)] = (unsigned int) config.emoncms.port;
   root[FPSTR(CFG_EMON_URL)]  = config.emoncms.url;
+  root[FPSTR(CFG_EMON_TOPIC)]  = config.emoncms.topic;
   root[FPSTR(CFG_EMON_KEY)]  = config.emoncms.apikey;
   root[FPSTR(CFG_EMON_NODE)] = (unsigned int) config.emoncms.node;
   root[FPSTR(CFG_EMON_FREQ)] = (unsigned int) config.emoncms.freq;
+  root[FPSTR(CFG_EMON_HTTP)] = (config.emoncms.bmode & CFG_BMODE_HTTP) ? 1 : 0;
+  root[FPSTR(CFG_EMON_MQTT)] = (config.emoncms.bmode & CFG_BMODE_MQTT) ? 1 : 0;
 
   root[FPSTR(CFG_JDOM_HOST)] = config.jeedom.host;
   root[FPSTR(CFG_JDOM_PORT)] = (unsigned int) config.jeedom.port;
   root[FPSTR(CFG_JDOM_URL)]  = config.jeedom.url;
+  root[FPSTR(CFG_JDOM_TOPIC)]  = config.jeedom.topic;
   root[FPSTR(CFG_JDOM_KEY)]  = config.jeedom.apikey;
   root[FPSTR(CFG_JDOM_ADCO)] = config.jeedom.adco;
   root[FPSTR(CFG_JDOM_FREQ)] = (unsigned int) config.jeedom.freq;
+  root[FPSTR(CFG_JDOM_HTTP)] = (config.jeedom.bmode & CFG_BMODE_HTTP) ? 1 : 0;
+  root[FPSTR(CFG_JDOM_MQTT)] = (config.jeedom.bmode & CFG_BMODE_MQTT) ? 1 : 0;
 
   root[FPSTR(CFG_DOMZ_HOST)] = config.domz.host;
   root[FPSTR(CFG_DOMZ_PORT)] = (unsigned int) config.domz.port;
   root[FPSTR(CFG_DOMZ_URL)]  = config.domz.url;
+  root[FPSTR(CFG_DOMZ_TOPIC)]  = config.domz.topic;
   root[FPSTR(CFG_DOMZ_USER)] = config.domz.user;
   root[FPSTR(CFG_DOMZ_PASS)] = config.domz.pass;
-  /*root[FPSTR(CFG_DOMZ_INDEX)] = (unsigned int) config.domz.index;*/
+  root[FPSTR(CFG_DOMZ_IDX_MCP3421)] = (unsigned int) config.domz.idx_mcp3421;
+  root[FPSTR(CFG_DOMZ_IDX_SI7021)] = (unsigned int) config.domz.idx_si7021;
+  root[FPSTR(CFG_DOMZ_IDX_SHT10)] = (unsigned int) config.domz.idx_sht10;
   root[FPSTR(CFG_DOMZ_IDX_TXT)] = (unsigned int) config.domz.idx_txt;
   root[FPSTR(CFG_DOMZ_IDX_P1SM)] = (unsigned int) config.domz.idx_p1sm;
   root[FPSTR(CFG_DOMZ_IDX_CRT)] = (unsigned int) config.domz.idx_crt;
@@ -810,6 +819,8 @@ void confJSONTable(AsyncWebServerRequest * request)
   root[FPSTR(CFG_DOMZ_IDX_KWH)] = (unsigned int) config.domz.idx_kwh;
   root[FPSTR(CFG_DOMZ_IDX_PCT)] = (unsigned int) config.domz.idx_pct;
   root[FPSTR(CFG_DOMZ_FREQ)] = (unsigned int) config.domz.freq;
+  root[FPSTR(CFG_DOMZ_HTTP)] = (config.domz.bmode & CFG_BMODE_HTTP) ? 1 : 0;
+  root[FPSTR(CFG_DOMZ_MQTT)] = (config.domz.bmode & CFG_BMODE_MQTT) ? 1 : 0;
 
   root[FPSTR(CFG_COUNT1_GPIO)]  = (unsigned int) config.counter.gpio1;
   root[FPSTR(CFG_COUNT1_DELAY)] = (unsigned int) config.counter.delay1;
@@ -818,8 +829,19 @@ void confJSONTable(AsyncWebServerRequest * request)
   root[FPSTR(CFG_COUNT2_DELAY)] = (unsigned int) config.counter.delay2;
   root[FPSTR(CFG_COUNT2_VALUE)] = (unsigned long) config.counter.value2;
 
+  root[FPSTR(CFG_MQTT_HOST)] = config.mqtt.host;
+  root[FPSTR(CFG_MQTT_PORT)] = (unsigned int) config.mqtt.port;
+  root[FPSTR(CFG_MQTT_USR)] = config.mqtt.usr;
+  root[FPSTR(CFG_MQTT_PWD)] = config.mqtt.pwd;
+  root[FPSTR(CFG_MQTT_INT)] = inTopic.c_str();
+  root[FPSTR(CFG_MQTT_OUT)] = outTopic.c_str();
+  root[FPSTR(CFG_MQTT_QOS)] = MQTT_QOS_STRING;
+  root[FPSTR(CFG_MQTT_RET)] = MQTT_RET_STRING;
+  root[FPSTR(CFG_MQTT_VER)] = MQTT_VER_STRING;
+
   root[FPSTR(CFG_HTTP_USR)] = config.http_usr;
   root[FPSTR(CFG_HTTP_PWD)] = config.http_pwd;
+  
   root[FPSTR(CFG_OTA_AUTH)] = config.ota_auth;
   root[FPSTR(CFG_OTA_PORT)] = (unsigned int) config.ota_port;
 
@@ -844,6 +866,7 @@ void confJSONTable(AsyncWebServerRequest * request)
   root[FPSTR(CFG_CFG_AP)]     = (config.config & CFG_AP) ? 1 : 0;
   root[FPSTR(CFG_CFG_WIFI)]   = (config.config & CFG_WIFI) ? 1 : 0;
   root[FPSTR(CFG_CFG_STATIC)] = (config.config & CFG_STATIC) ? 1 : 0;
+  root[FPSTR(CFG_CFG_MQTT)] = (config.config & CFG_MQTT) ? 1 : 0;
   root[FPSTR(CFG_CFG_SI7021)] = (config.config & CFG_SI7021) ? 1 : 0;
   root[FPSTR(CFG_CFG_SHT10)]  = (config.config & CFG_SHT10) ? 1 : 0;
   root[FPSTR(CFG_CFG_MCP3421)] = (config.config & CFG_MCP3421) ? 1 : 0;
@@ -1052,6 +1075,24 @@ String logJSONTable(AsyncWebServerRequest * request)
 
   // Will be empty for web request
   return JsonStr;
+}
+
+/* ======================================================================
+  Function: handleConfigReset
+  Purpose : reset the module to factory settingd
+  Input   : -
+  Output  : -
+  Comments: -
+  ====================================================================== */
+void handleConfigReset(AsyncWebServerRequest * request)
+{
+  // Just to debug where we are
+  Debug(F("Serving /config_reset page..."));
+  request->send ( 200, "text/plain", FPSTR(FP_RESTART) );
+  Debugln(F("Ok!"));
+  
+  resetConfig();
+  resetBoard();
 }
 
 /* ======================================================================
@@ -1371,6 +1412,7 @@ void WS_setup(void)
   web_server.on("/spiffs_op",    handleSpiffsOperation);
   web_server.on("/wifiscan",     wifiScanJSON);
   web_server.on("/factory_reset", handleFactoryReset);
+  web_server.on("/config_reset", handleConfigReset);
   web_server.on("/reset",        handleReset);
 
   //web_server.rewrite("/index.htm", "dpi.htm").setFilter(ON_AP_FILTER);

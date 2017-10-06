@@ -22,6 +22,7 @@ var urls = {
     sensors: 'sensors',
     hb: "hb",
     reset: "reset",
+    config_reset: "config_reset",
     factory_reset: "factory_reset",
     config_form: "config_form",
     update: "update",
@@ -524,9 +525,10 @@ $('a[data-toggle=\"tab\"]').on('shown.bs.tab', function (e) {
         //onBodyLoad
         //wsSend('$log');
     } else if (target == '#tab_edit') {
-        //TODO: Implement the Edit within a tab?
         $("#tab_edit_frm").attr("src", "/edit.htm");
         //onBodyLoad();
+    } else if (target == '#tab_term') {
+        setTimeout(function(){term.focus(true)},500);
     } else if (target == '#tab_fs') {
         refreshSpiffs();
         // Configuration Tab activation
@@ -550,6 +552,7 @@ $('a[data-toggle=\"tab\"]').on('shown.bs.tab', function (e) {
 
                 var cfg_ap = data["cfg_ap"] == 1 ? true : false;
                 var cfg_wifi = data["cfg_wifi"] == 1 ? true : false;
+                var cfg_mqtt = data["cfg_mqtt"] == 1 ? true : false;
                 var cfg_debug = data["cfg_debug"] == 1 ? true : false;
                 var cfg_logger = data["cfg_logger"] == 1 ? true : false;
                 var cfg_tinfo = data["cfg_tinfo"] == 1 ? true : false;
@@ -565,11 +568,62 @@ $('a[data-toggle=\"tab\"]').on('shown.bs.tab', function (e) {
                 var sens_pwr_led = JSON.parse("[" + data["sens_pwr_led"] + "]");
                 var led_panel = data["led_panel"];
 
+
+                var mqtt_ret = data["mqtt_ret"] == 1 ? true : false;
+
                 var cfg_led_bright = data["cfg_led_bright"];
                 var cfg_led_hb = data["cfg_led_hb"];
 
+                var emon_http = data["emon_http"] == 1 ? true : false;
+                var emon_mqtt = data["emon_mqtt"] == 1 ? true : false;
+
+                var jdom_http = data["jdom_http"] == 1 ? true : false;
+                var jdom_mqtt = data["jdom_mqtt"] == 1 ? true : false;
+
+                var domz_http = data["domz_http"] == 1 ? true : false;
+                var domz_mqtt = data["domz_mqtt"] == 1 ? true : false;
 
                 $("#frm_config").autofill(data);
+
+                $("#cfg_mqtt").bootstrapSwitch({
+                    state: cfg_mqtt,
+                    onColor: "success"
+                });
+
+                $("#mqtt_ret").bootstrapSwitch({
+                    state: mqtt_ret,
+                    onColor: "success"
+                });
+
+                $("#emon_http").bootstrapSwitch({
+                    state: emon_http,
+                    onColor: "success"
+                });
+
+                $("#emon_mqtt").bootstrapSwitch({
+                    state: emon_mqtt,
+                    onColor: "success"
+                });
+
+                $("#jdom_http").bootstrapSwitch({
+                    state: jdom_http,
+                    onColor: "success"
+                });
+
+                $("#jdom_mqtt").bootstrapSwitch({
+                    state: jdom_mqtt,
+                    onColor: "success"
+                });
+
+                $("#domz_http").bootstrapSwitch({
+                    state: domz_http,
+                    onColor: "success"
+                });
+
+                $("#domz_mqtt").bootstrapSwitch({
+                    state: domz_mqtt,
+                    onColor: "success"
+                });
 
                 $("#tinfo_edf").bootstrapSwitch({
                     state: tinfo_edf,
@@ -716,7 +770,13 @@ $('#btn_delete').click(function () {
     refreshSpiffs();
 });
 
-$('#btn_reset').click(function () {
+$('#btn_rst').click(function () {
+    $.post(urls['config_reset']);
+    waitReboot();
+    return false;
+});
+
+$('#btn_raz').click(function () {
     $.post(urls['factory_reset']);
     waitReboot();
     return false;

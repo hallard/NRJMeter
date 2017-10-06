@@ -223,17 +223,23 @@ void resetConfig(uint32_t clientid)
   strcpy_P(config.emoncms.host, PSTR(CFG_EMON_DEFAULT_HOST));
   config.emoncms.port = CFG_EMON_DEFAULT_PORT;
   strcpy_P(config.emoncms.url, PSTR(CFG_EMON_DEFAULT_URL));
+  strcpy_P(config.emoncms.topic, CFG_EMON_DEFAULT_TOPIC);
+  config.emoncms.bmode = ( CFG_EMON_DEFAULT_BMODE );
 
   // Jeedom
   strcpy_P(config.jeedom.host, CFG_JDOM_DEFAULT_HOST);
   config.jeedom.port = CFG_JDOM_DEFAULT_PORT;
   strcpy_P(config.jeedom.url, CFG_JDOM_DEFAULT_URL);
+  strcpy_P(config.jeedom.topic, CFG_JDOM_DEFAULT_TOPIC);
   strcpy_P(config.jeedom.adco, CFG_DEFAULT_ADCO);
+  config.jeedom.bmode = ( CFG_JDOM_DEFAULT_BMODE );
 
   // Domoticz
   strcpy_P(config.domz.host, CFG_DOMZ_DEFAULT_HOST);
   config.domz.port = CFG_DOMZ_DEFAULT_PORT;
   strcpy_P(config.domz.url, CFG_DOMZ_DEFAULT_URL);
+  strcpy_P(config.domz.topic, CFG_DOMZ_DEFAULT_TOPIC);
+  config.domz.bmode = ( CFG_DOMZ_DEFAULT_BMODE );
 
   // Counters
   config.counter.delay1 = CFG_COUNTER_DEFAULT_DELAY;
@@ -249,6 +255,10 @@ void resetConfig(uint32_t clientid)
   config.sensors.pwr_min_warn   = CFG_SENSORS_PWR_MIN_WARN;
   config.sensors.pwr_max_warn   = CFG_SENSORS_PWR_MAX_WARN ;
   config.sensors.freq           = CFG_SENSORS_DEFAULT_FREQ ;
+
+  //MQTT
+  strcpy_P(config.mqtt.host, CFG_MQTT_DEFAULT_HOST);
+  config.mqtt.port = CFG_MQTT_DEFAULT_PORT;
 
   //TInfo
   config.tinfo.type = CFG_TI_NONE;
@@ -305,6 +315,7 @@ void showConfig(uint16_t section, uint32_t clientid )
     OUT("Config (0x%04X)  : ", config.config); 
     if(config.config&CFG_AP)          strcat_P(buff, PSTR("ACCESS_POINT "));
     if(config.config&CFG_WIFI)        strcat_P(buff, PSTR("WIFI "));
+    if(config.config&CFG_MQTT)        strcat_P(buff, PSTR("MQTT "));
     if(config.config&CFG_STATIC)      strcat_P(buff, PSTR("STATIC "));
     if(config.config&CFG_RGB_LED)     strcat_P(buff, PSTR("RGBLED "));
     if(config.config&CFG_DEBUG)       strcat_P(buff, PSTR("DEBUG "));
@@ -362,14 +373,33 @@ void showConfig(uint16_t section, uint32_t clientid )
     outputBuffer(buff, clientid);
  }
 
+  if (section & CFG_HLP_MQTT) {
+    strcpy_P(buff, PSTR("\r\n===== MQTT\r\n")); 
+    OUT("Broker     : %s\n", config.mqtt.host);
+    OUT("Port       : %d\n", config.mqtt.port);
+    OUT("User       : %s\n", config.mqtt.usr);
+    OUT("Password   : %s\n", config.mqtt.pwd);
+    OUT("In Topic   : %s\n", inTopic.c_str());
+    OUT("Out Topic  : %s\n", outTopic.c_str());
+    OUT("QoS        : %s\n", MQTT_QOS_STRING);
+    OUT("Retain     : %s\n", MQTT_RET_STRING);
+    OUT("Protocol   : %s\n", MQTT_VER_STRING);
+
+    // Send to correct client output 
+    outputBuffer(buff, clientid);
+ }
+
   if (section & CFG_HLP_DATA) {
     strcpy_P(buff, PSTR("\r\n===== Data Server\n")); 
-    OUT("host : %s\n", config.emoncms.host); 
-    OUT("port : %d\n", config.emoncms.port); 
-    OUT("url  : %s\n", config.emoncms.url); 
-    OUT("key  : %s\n", config.emoncms.apikey); 
-    OUT("node : %d\n", config.emoncms.node); 
-    OUT("freq : %d\n", config.emoncms.freq); 
+    OUT("host  : %s\n", config.emoncms.host); 
+    OUT("port  : %d\n", config.emoncms.port); 
+    OUT("url   : %s\n", config.emoncms.url); 
+    OUT("key   : %s\n", config.emoncms.apikey); 
+    OUT("node  : %d\n", config.emoncms.node); 
+    OUT("freq  : %d\n", config.emoncms.freq); 
+    OUT("topic : %s\n", config.emoncms.topic); 
+    OUT("http  : %s\n", (config.emoncms.bmode & CFG_BMODE_HTTP ? "on" : "off")); 
+    OUT("mqtt  : %s\n", (config.emoncms.bmode & CFG_BMODE_MQTT ? "on" : "off"));
 
     // Send to correct client output 
     outputBuffer(buff, clientid);
@@ -393,7 +423,10 @@ void showConfig(uint16_t section, uint32_t clientid )
     OUT("key  : %s\n", config.jeedom.apikey); 
     OUT("adco : %d\n", config.jeedom.adco); 
     OUT("freq : %d\n", config.jeedom.freq); 
-
+    OUT("topic : %s\n", config.jeedom.topic); 
+    OUT("http  : %s\n", (config.jeedom.bmode & CFG_BMODE_HTTP ? "on" : "off")); 
+    OUT("mqtt  : %s\n", (config.jeedom.bmode & CFG_BMODE_MQTT ? "on" : "off"));
+    
     // Send to correct client output 
     outputBuffer(buff, clientid);
   }
@@ -405,7 +438,9 @@ void showConfig(uint16_t section, uint32_t clientid )
     OUT("url  : %s\n", config.domz.url); 
     OUT("user : %s\n", config.domz.user); 
     OUT("pass : %s\n", config.domz.pass); 
-    /*OUT("idx  : %d\n", config.domz.index); */
+    OUT("idx mcp3421 : %d\n", config.domz.idx_mcp3421); 
+    OUT("idx si7021 : %d\n", config.domz.idx_si7021); 
+    OUT("idx sht10 : %d\n", config.domz.idx_sht10); 
     OUT("idx txt : %d\n", config.domz.idx_txt); 
     OUT("idx p1sm : %d\n", config.domz.idx_p1sm); 
     OUT("idx crt : %d\n", config.domz.idx_crt); 
@@ -413,7 +448,10 @@ void showConfig(uint16_t section, uint32_t clientid )
     OUT("idx kwh : %d\n", config.domz.idx_kwh); 
     OUT("idx pct : %d\n", config.domz.idx_pct); 
     OUT("freq : %d\n", config.domz.freq); 
-
+    OUT("topic : %s\n", config.domz.topic); 
+    OUT("http  : %s\n", (config.domz.bmode & CFG_BMODE_HTTP ? "on" : "off")); 
+    OUT("mqtt  : %s\n", (config.domz.bmode & CFG_BMODE_MQTT ? "on" : "off"));
+    
     // Send to correct client output 
     outputBuffer(buff, clientid);
   }
@@ -477,6 +515,7 @@ void showHelp(uint16_t section, uint32_t clientid)
     ws.text(clientid, FPSTR(HELP_HELP));
     if (section & CFG_HLP_SYS)      ws.text(clientid, FPSTR(HELP_SYS));
     if (section & CFG_HLP_WIFI)     ws.text(clientid, FPSTR(HELP_WIFI));
+    if (section & CFG_HLP_MQTT)     ws.text(clientid, FPSTR(HELP_MQTT));
     if (section & CFG_HLP_DATA)     ws.text(clientid, FPSTR(HELP_DATA));
     if (section & CFG_HLP_TINFO)    ws.text(clientid, FPSTR(HELP_TINFO));
     if (section & CFG_HLP_JEEDOM)   ws.text(clientid, FPSTR(HELP_JEEDOM));
@@ -487,6 +526,7 @@ void showHelp(uint16_t section, uint32_t clientid)
     DEBUG_SERIAL.print(FPSTR(HELP_HELP));
     if (section & CFG_HLP_SYS)      DEBUG_SERIAL.print(FPSTR(HELP_SYS));
     if (section & CFG_HLP_WIFI)     DEBUG_SERIAL.print(FPSTR(HELP_WIFI));
+    if (section & CFG_HLP_MQTT)     DEBUG_SERIAL.print(FPSTR(HELP_MQTT));
     if (section & CFG_HLP_DATA)     DEBUG_SERIAL.print(FPSTR(HELP_DATA));
     if (section & CFG_HLP_TINFO)    DEBUG_SERIAL.print(FPSTR(HELP_TINFO));
     if (section & CFG_HLP_JEEDOM)   DEBUG_SERIAL.print(FPSTR(HELP_JEEDOM));
@@ -566,6 +606,8 @@ void execCmd(char *line, uint32_t clientid)
             cfg_hlp = CFG_HLP_SYS ;
           } else if (!strcasecmp_P(par2, PSTR("wifi"))) {
             cfg_hlp = CFG_HLP_WIFI;
+          } else if (!strcasecmp_P(par2, PSTR("mqtt"))) {
+            cfg_hlp = CFG_HLP_MQTT;
           } else if (!strcasecmp_P(par2, PSTR("data"))) {
             cfg_hlp = CFG_HLP_DATA;
           } else if (!strcasecmp_P(par2, PSTR("tinfo"))) {
@@ -638,7 +680,6 @@ void execCmd(char *line, uint32_t clientid)
       if (!strcasecmp_P(cmd, PSTR("tinfo")) ) {
         Debugf("Cmd='tinfo_','%s','%s'\r\n", par1, par2);
         if (!strcasecmp_P(par1, &CFG_TINFO_EDF[6])) {
-
           uint8_t o1_msk = 0x00; // Future bits to set
           uint8_t a1_msk = 0xFF; // Future bits to clear
           
@@ -686,6 +727,20 @@ void execCmd(char *line, uint32_t clientid)
           catParam(config.http_pwd, CFG_PASS_SIZE, par2, par3, par4);
         }
 
+
+      // mqtt command
+      } else if (!strcasecmp_P(cmd, PSTR("mqtt")) ) {
+        Debugf("Cmd='mqtt_','%s','%s'\r\n", par1, par2);
+        if (!strcasecmp_P(par1, &CFG_MQTT_HOST[5])) {
+          catParam(config.mqtt.host, CFG_MQTT_HOST_SIZE, par2, par3, par4);
+        } else if (!strcasecmp_P(par1, &CFG_MQTT_PORT[5] )) {
+          config.mqtt.port = (v>=0 && v<=65535) ? v : CFG_MQTT_DEFAULT_PORT ;
+        } else if (!strcasecmp_P(par1, &CFG_MQTT_USR[5])) {
+          catParam(config.mqtt.usr, CFG_MQTT_USER_SIZE, par2, par3, par4);
+        } else if (!strcasecmp_P(par1, &CFG_MQTT_PWD[5])) {
+          catParam(config.mqtt.pwd, CFG_MQTT_PASS_SIZE, par2, par3, par4);
+        }
+
       // emon command
       } else if (!strcasecmp_P(cmd, PSTR("emon")) ) {
         Debugf("Cmd='emon_','%s','%s'\r\n", par1, par2);
@@ -697,6 +752,32 @@ void execCmd(char *line, uint32_t clientid)
           catParam(config.emoncms.url, CFG_EMON_URL_SIZE, par2, par3, par4);
         } else if (!strcasecmp_P(par1, &CFG_EMON_KEY[5])) {
           catParam(config.emoncms.apikey, CFG_EMON_APIKEY_SIZE, par2, par3, par4);
+        } else if (!strcasecmp_P(par1, &CFG_EMON_TOPIC[5])) {
+          catParam(config.emoncms.topic, CFG_MQTT_TOPIC_SIZE, par2, par3, par4);
+        } else if (!strcasecmp_P(par1, &CFG_EMON_HTTP[5])) {
+              uint8_t o1_msk = 0x00; // Future bits to set
+              uint8_t a1_msk = 0xFF; // Future bits to clear
+              
+              if (!strcasecmp(par2,"on") ) {
+                o1_msk |= CFG_BMODE_HTTP;
+              } else if (!strcasecmp(par2,"off") ) {
+                a1_msk &= ~CFG_BMODE_HTTP;
+              }
+    
+              config.emoncms.bmode |= o1_msk; // Set needed bits
+              config.emoncms.bmode &= a1_msk; // clear needed bits
+        } else if (!strcasecmp_P(par1, &CFG_EMON_MQTT[5])) {
+              uint8_t o1_msk = 0x00; // Future bits to set
+              uint8_t a1_msk = 0xFF; // Future bits to clear
+              
+              if (!strcasecmp(par2,"on") ) {
+                o1_msk |= CFG_BMODE_MQTT;
+              } else if (!strcasecmp(par2,"off") ) {
+                a1_msk &= ~CFG_BMODE_MQTT;
+              }
+    
+              config.emoncms.bmode |= o1_msk; // Set needed bits
+              config.emoncms.bmode &= a1_msk; // clear needed bits
         } else if (!strcasecmp_P(par1, &CFG_EMON_NODE[5])) {
           config.emoncms.node = (v>=0 && v<=255) ? v : 0 ;
         } else if (!strcasecmp_P(par1, &CFG_EMON_FREQ[5])) {
@@ -712,6 +793,32 @@ void execCmd(char *line, uint32_t clientid)
           config.jeedom.port = (v>=0 && v<=65535) ? v : CFG_JDOM_DEFAULT_PORT ;
         } else if (!strcasecmp_P(par1, &CFG_JDOM_URL[5])) {
           catParam(config.jeedom.url, CFG_JDOM_URL_SIZE, par2, par3, par4);
+        } else if (!strcasecmp_P(par1, &CFG_JDOM_TOPIC[5])) {
+          catParam(config.jeedom.topic, CFG_MQTT_TOPIC_SIZE, par2, par3, par4);
+        } else if (!strcasecmp_P(par1, &CFG_JDOM_HTTP[5])) {
+              uint8_t o1_msk = 0x00; // Future bits to set
+              uint8_t a1_msk = 0xFF; // Future bits to clear
+              
+              if (!strcasecmp(par2,"on") ) {
+                o1_msk |= CFG_BMODE_HTTP;
+              } else if (!strcasecmp(par2,"off") ) {
+                a1_msk &= ~CFG_BMODE_HTTP;
+              }
+    
+              config.jeedom.bmode |= o1_msk; // Set needed bits
+              config.jeedom.bmode &= a1_msk; // clear needed bits
+        } else if (!strcasecmp_P(par1, &CFG_JDOM_MQTT[5])) {
+              uint8_t o1_msk = 0x00; // Future bits to set
+              uint8_t a1_msk = 0xFF; // Future bits to clear
+              
+              if (!strcasecmp(par2,"on") ) {
+                o1_msk |= CFG_BMODE_MQTT;
+              } else if (!strcasecmp(par2,"off") ) {
+                a1_msk &= ~CFG_BMODE_MQTT;
+              }
+    
+              config.jeedom.bmode |= o1_msk; // Set needed bits
+              config.jeedom.bmode &= a1_msk; // clear needed bits
         } else if (!strcasecmp_P(par1, &CFG_JDOM_KEY[5])) {
           catParam(config.jeedom.apikey, CFG_JDOM_APIKEY_SIZE, par2, par3, par4);
         } else if (!strcasecmp_P(par1, &CFG_JDOM_ADCO[5])) {
@@ -737,6 +844,18 @@ void execCmd(char *line, uint32_t clientid)
               if (!strcasecmp_P(par2, &CFG_DOMZ_IDX_TXT[9] )) {
                 config.domz.idx_txt = (i>=0 && i<=65535) ? i : 0 ;
               }
+              else if(!strcasecmp_P(par2, &CFG_DOMZ_IDX_MCP3421[9] ))
+              {
+                config.domz.idx_mcp3421 = (i>=0 && i<=65535) ? i : 0 ;
+              }
+              else if(!strcasecmp_P(par2, &CFG_DOMZ_IDX_SI7021[9] ))
+              {
+                config.domz.idx_si7021 = (i>=0 && i<=65535) ? i : 0 ;
+              }
+              else if(!strcasecmp_P(par2, &CFG_DOMZ_IDX_SHT10[9] ))
+              {
+                config.domz.idx_sht10 = (i>=0 && i<=65535) ? i : 0 ;
+              }
               else if(!strcasecmp_P(par2, &CFG_DOMZ_IDX_P1SM[9] ))
               {
                 config.domz.idx_p1sm = (i>=0 && i<=65535) ? i : 0 ;
@@ -760,6 +879,32 @@ void execCmd(char *line, uint32_t clientid)
           }
         } else if (!strcasecmp_P(par1, &CFG_DOMZ_URL[5])) {
           catParam(config.domz.url, CFG_DOMZ_URL_SIZE, par2, par3, par4);
+        } else if (!strcasecmp_P(par1, &CFG_DOMZ_TOPIC[5])) {
+          catParam(config.domz.topic, CFG_MQTT_TOPIC_SIZE, par2, par3, par4);
+        } else if (!strcasecmp_P(par1, &CFG_DOMZ_HTTP[5])) {
+              uint8_t o1_msk = 0x00; // Future bits to set
+              uint8_t a1_msk = 0xFF; // Future bits to clear
+              
+              if (!strcasecmp(par2,"on") ) {
+                o1_msk |= CFG_BMODE_HTTP;
+              } else if (!strcasecmp(par2,"off") ) {
+                a1_msk &= ~CFG_BMODE_HTTP;
+              }
+    
+              config.domz.bmode |= o1_msk; // Set needed bits
+              config.domz.bmode &= a1_msk; // clear needed bits
+        } else if (!strcasecmp_P(par1, &CFG_DOMZ_MQTT[5])) {
+              uint8_t o1_msk = 0x00; // Future bits to set
+              uint8_t a1_msk = 0xFF; // Future bits to clear
+              
+              if (!strcasecmp(par2,"on") ) {
+                o1_msk |= CFG_BMODE_MQTT;
+              } else if (!strcasecmp(par2,"off") ) {
+                a1_msk &= ~CFG_BMODE_MQTT;
+              }
+    
+              config.domz.bmode |= o1_msk; // Set needed bits
+              config.domz.bmode &= a1_msk; // clear needed bits
         } else if (!strcasecmp_P(par1, &CFG_DOMZ_USER[5])) {
           catParam(config.domz.user, CFG_USER_SIZE, par2, par3, par4);
         } else if (!strcasecmp_P(par1, &CFG_DOMZ_PASS[5])) {
@@ -786,6 +931,8 @@ void execCmd(char *line, uint32_t clientid)
             if (val) o_msk |= CFG_RGB_LED; else a_msk &= ~CFG_RGB_LED;
           } else if (!strcasecmp_P(par1, &CFG_CFG_DEBUG[4] )) {
             if (val) o_msk |= CFG_DEBUG; else a_msk &= ~CFG_DEBUG;
+          } else if (!strcasecmp_P(par1, &CFG_CFG_MQTT[4] )) {
+            if (val) o_msk |= CFG_MQTT; else a_msk &= ~CFG_MQTT;
           } else if (!strcasecmp_P(par1, &CFG_CFG_LOGGER[4] )) {
             if (val) o_msk |= CFG_LOGGER; else a_msk &= ~CFG_LOGGER;
           } else if (!strcasecmp_P(par1, &CFG_CFG_DEMO[4] )) {

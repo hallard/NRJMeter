@@ -46,6 +46,7 @@
 // Global project file
 #include "NRJMeter.h"
 #include "TInfo.h"
+#include "MQTT.h"
 //#include "debug.h"
 
 // Watchdog
@@ -520,7 +521,7 @@ int WifiHandleConn(boolean setup = false)
     if (*config.ssid) {
       ret = WifiConnect(true);
     } else {
-      DebugF("no Wifi SSID in config, set to AP Only!"); 
+      DebuglnF("no Wifi SSID in config, set to AP Only!"); 
       WiFi.mode(WIFI_AP);
     }
 
@@ -796,6 +797,9 @@ void setup()
   // start Teleinformation
   TInfo_setup();
 
+  //start MQTT
+  MQTT_setup();
+
   // Setup Web server and WenSockets
   WS_setup();
 
@@ -913,6 +917,9 @@ void loop()
   // Do all related TInfo stuff
   handle_tinfo();
 
+  // Do all related MQTT stuff
+  handle_MQTT();
+
   // Only once task per loop, let system do its own task
   if (task_1_sec) { 
     //Debugf("[%5ld][0x%04X]...", seconds, config.config);
@@ -979,6 +986,11 @@ void loop()
     if (config.emoncms.freq) 
       if ( ++tick_emoncms >= config.emoncms.freq ) 
         task_emoncms = true;
+
+    // Jeedom ticker check
+    if (config.jeedom.freq) 
+      if ( ++tick_jeedom >= config.jeedom.freq ) 
+        task_jeedom = true;
   
     // DomoticZ ticker check
     if (config.domz.freq) 
@@ -1076,19 +1088,25 @@ void loop()
     DebuglnF("-- OK!");
 
   } else if (task_emoncms) { 
-    DebugF("task_emoncms...");
+    DebuglnF("task_emoncms...");
     emoncmsPost(); 
     task_emoncms=false; 
     tick_emoncms = 0;
 
+  } else if (task_jeedom) { 
+    DebuglnF("task_jeedom...");
+    jeedomPost(); 
+    task_jeedom=false; 
+    tick_jeedom = 0;
+
   } else if (task_domoticz) { 
-    DebugF("task_domoticz...");
+    DebuglnF("task_domoticz...");
     domoticzPost(); 
     task_domoticz=false; 
     tick_domoticz = 0;
 
   } else if (task_reconf) { 
-    DebugF("task_reconf...");
+    DebuglnF("task_reconf...");
     LedRGBSetup();
     task_reconf=false; 
   }

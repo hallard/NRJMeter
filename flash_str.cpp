@@ -69,26 +69,45 @@ const char CFG_OTA_AUTH[] PROGMEM = "ota_auth";
 const char CFG_OTA_PORT[] PROGMEM = "ota_port";
 const char CFG_EEP_DUMP[]	PROGMEM = "eep_dump";
 
+const char CFG_MQTT_HOST[] PROGMEM = "mqtt_host";
+const char CFG_MQTT_PORT[] PROGMEM = "mqtt_port";
+const char CFG_MQTT_USR[]  PROGMEM = "mqtt_usr";
+const char CFG_MQTT_PWD[]  PROGMEM = "mqtt_pwd";
+const char CFG_MQTT_INT[]  PROGMEM = "mqtt_in";
+const char CFG_MQTT_OUT[]  PROGMEM = "mqtt_out";
+const char CFG_MQTT_QOS[]  PROGMEM = "mqtt_qos";
+const char CFG_MQTT_RET[]  PROGMEM = "mqtt_ret";
+const char CFG_MQTT_VER[]  PROGMEM = "mqtt_ver";
+
 const char CFG_EMON_HOST[] 	PROGMEM = "emon_host";
 const char CFG_EMON_PORT[] 	PROGMEM = "emon_port";
 const char CFG_EMON_URL[] 	PROGMEM = "emon_url";
+const char CFG_EMON_TOPIC[]   PROGMEM = "emon_topic";
 const char CFG_EMON_KEY[] 	PROGMEM = "emon_apikey";
 const char CFG_EMON_NODE[] 	PROGMEM = "emon_node";
 const char CFG_EMON_FREQ[] 	PROGMEM = "emon_freq";
+const char CFG_EMON_HTTP[]   PROGMEM = "emon_http";
+const char CFG_EMON_MQTT[]   PROGMEM = "emon_mqtt";
 
 const char CFG_JDOM_HOST[] PROGMEM = "jdom_host";
 const char CFG_JDOM_PORT[] PROGMEM = "jdom_port";
 const char CFG_JDOM_URL[]  PROGMEM = "jdom_url";
+const char CFG_JDOM_TOPIC[]  PROGMEM = "jdom_topic";
 const char CFG_JDOM_KEY[]  PROGMEM = "jdom_apikey";
 const char CFG_JDOM_ADCO[] PROGMEM = "jdom_adco";
 const char CFG_JDOM_FREQ[] PROGMEM = "jdom_freq";
+const char CFG_JDOM_HTTP[] PROGMEM = "jdom_http";
+const char CFG_JDOM_MQTT[] PROGMEM = "jdom_mqtt";
 
 const char CFG_DOMZ_HOST[] PROGMEM  = "domz_host";
 const char CFG_DOMZ_PORT[] PROGMEM  = "domz_port";
 const char CFG_DOMZ_URL[]  PROGMEM  = "domz_url";
+const char CFG_DOMZ_TOPIC[]  PROGMEM  = "domz_topic";
 const char CFG_DOMZ_USER[]  PROGMEM = "domz_user";
 const char CFG_DOMZ_PASS[]  PROGMEM = "domz_pass";
-/*const char CFG_DOMZ_INDEX[] PROGMEM = "domz_idx";*/
+const char CFG_DOMZ_IDX_MCP3421[]  PROGMEM = "domz_idx_mcp3421";
+const char CFG_DOMZ_IDX_SI7021[]  PROGMEM = "domz_idx_si7021";
+const char CFG_DOMZ_IDX_SHT10[]  PROGMEM = "domz_idx_sht10";
 const char CFG_DOMZ_IDX_TXT[]  PROGMEM = "domz_idx_txt";
 const char CFG_DOMZ_IDX_P1SM[] PROGMEM = "domz_idx_p1sm";
 const char CFG_DOMZ_IDX_CRT[]  PROGMEM = "domz_idx_crt";
@@ -96,6 +115,8 @@ const char CFG_DOMZ_IDX_ELEC[] PROGMEM = "domz_idx_elec";
 const char CFG_DOMZ_IDX_KWH[]  PROGMEM = "domz_idx_kwh";
 const char CFG_DOMZ_IDX_PCT[]  PROGMEM = "domz_idx_pct";
 const char CFG_DOMZ_FREQ[]     PROGMEM  = "domz_freq";
+const char CFG_DOMZ_HTTP[]     PROGMEM  = "domz_http";
+const char CFG_DOMZ_MQTT[]     PROGMEM  = "domz_mqtt";
 
 const char CFG_COUNT1_GPIO[]  PROGMEM = "cnt_io_1";
 const char CFG_COUNT2_GPIO[]  PROGMEM = "cnt_io_2";
@@ -131,6 +152,7 @@ const char CFG_CFG_OLED[] 	PROGMEM = "cfg_oled";
 const char CFG_CFG_TINFO[]  PROGMEM = "cfg_tinfo";
 const char CFG_CFG_DEMO[]   PROGMEM = "cfg_demo";
 const char CFG_CFG_STATIC[]	PROGMEM = "cfg_static";
+const char CFG_CFG_MQTT[]   PROGMEM = "cfg_mqtt";
 const char CFG_CFG_SHT10[]	PROGMEM = "has_sht10";
 const char CFG_CFG_SI7021[]	PROGMEM = "has_si7021";
 const char CFG_CFG_MCP3421[]PROGMEM = "has_mcp3421";
@@ -138,12 +160,13 @@ const char CFG_CFG_HASOLED[]PROGMEM = "has_oled";
 
 
 const char HELP_HELP[] PROGMEM = "\r\n===== Help\r\n"
-	    "show help [sys|wifi|data|tinfo|sens|jdom|domz|cnt]   : show full help or section\r\n"
-	 		"show config [sys|wifi|data|tinfo|sens|jdom|domz|cnt] : show full config or section\r\n";
+	    "show help [sys|wifi|mqtt|data|tinfo|sens|jdom|domz|cnt]   : show full help or section\r\n"
+	 		"show config [sys|wifi|mqtt|data|tinfo|sens|jdom|domz|cnt] : show full config or section\r\n";
 
 const char HELP_SYS[] PROGMEM  = "\r\n===== Config\r\n" 
 	    "cfg ap  on|off    : Enable/Disable to be access point mode on or off\r\n"
 	    "cfg wifi on|off   : Enable/Disable Wifi on or off\r\n"
+      "cfg mqtt on|off   : Enable/Disable MQTT on or off\r\n"
 	    "cfg rgb on|off    : Enable/Disable rgb led\r\n"
 	    "cfg debug on|off  : Enable/Disable debug\r\n"
       "cfg demo on|off   : Enable/Disable demo data mode\r\n"
@@ -188,12 +211,26 @@ const char HELP_WIFI[] PROGMEM  = "\r\n===== Wifi\r\n"
 	    "  cfg static on     => Set Wifi static address need ip/mask/gw/dns also set\r\n"
 	    "  dns 192.168.1.254 => Set Wifi static DNS address need ip/mask/gw also set\r\n";
 
+const char HELP_MQTT[] PROGMEM  = "\r\n===== MQTT\r\n" 
+      "mqtt host name         : Set Broker host name\r\n"
+      "mqtt port tcp          : Set Broker port\r\n"
+      "mqtt usr user          : Set Broker User\r\n"
+      "mqtt pwd password      : Set Broker Password\r\n"
+      "-- Examples\r\n" 
+      "  mqtt host broker.local => Set Broker to connect to broker.local\r\n" 
+      "  mqtt port 1883         => Set Port to connect to broker on port 1883\r\n" 
+      "  mqtt usr admin         => Set User to connect to broker\r\n"
+      "  mqtt pwd password      => Set Password to connect to broker\r\n";
+      
 const char HELP_DATA[] PROGMEM  = "\r\n===== Data Server\r\n" 
 	    "emon host name     : Set server name/IP\r\n" 
 	    "emon port tcp      : Set server port [80|443]\r\n" 
 	    "emon url query     : Set post URL\r\n" 
+      "emon topic name    : Set MQTT In Topic\r\n" 
 	    "emon apikey key    : Set apikey\r\n" 
-	    "emon freq f        : Set sending interval to f sec\r\n" 
+	    "emon freq f        : Set sending interval to f sec\r\n"
+      "emon http on|off   : Set sending data using HTTP\r\n"
+      "emon mqtt on|off   : Set sending data using MQTT\r\n"
 	    "emon node n        : Set emoncms node number n\r\n" 
 	    "-- Examples\r\n" 
 	    "  emon host data.ch2i.eu    => Set data server \r\n" 
@@ -204,8 +241,11 @@ const char HELP_JEEDOM[] PROGMEM  = "\r\n===== Jeedom Server\r\n"
 	    "jdom host name     : Set server name/IP\r\n" 
 	    "jdom port tcp      : Set server port [80|443]\r\n" 
 	    "jdom url query     : Set post URL\r\n" 
+      "jdom topic name    : Set MQTT In Topic\r\n" 
 	    "jdom apikey key    : Set apikey\r\n" 
 	    "jdom freq f        : Set sending interval to f sec\r\n" 
+      "jdom http on|off   : Set sending data using HTTP\r\n"
+      "jdom mqtt on|off   : Set sending data using MQTT\r\n"
 	    "jdom adco serial   : Set ADCO serial number\r\n" 
 	    "-- Examples\r\n" 
 	    "  jdom host jeedom.local    => Set data server \r\n" 
@@ -213,13 +253,24 @@ const char HELP_JEEDOM[] PROGMEM  = "\r\n===== Jeedom Server\r\n"
 	    "  jdom url /Teleinfo.php    => set server url\r\n" ;
 
 const char HELP_DOMZ[] PROGMEM  = 	"\r\n===== DomoticZ Server\r\n" 
-	    "domz host name     : Set server name/IP\r\n" 
-	    "domz port tcp      : Set server port [80|443]\r\n" 
-	    "domz url query     : Set post URL\r\n" 
-	    "domz user username : Set server username\r\n" 
-	    "domz pass password : Set server password\r\n" 
-	    "domz freq f        : Set sending interval to f sec\r\n" 
-	    "domz index number  : Set device Index number\r\n" 
+	    "domz host name           : Set server name/IP\r\n" 
+	    "domz port tcp            : Set server port [80|443]\r\n" 
+	    "domz url query           : Set post URL\r\n" 
+      "domz topic name          : Set MQTT In Topic\r\n" 
+	    "domz user username       : Set server username\r\n" 
+	    "domz pass password       : Set server password\r\n" 
+	    "domz freq f              : Set sending interval to f sec\r\n" 
+      "domz http on|off         : Set sending data using HTTP\r\n"
+      "domz mqtt on|off         : Set sending data using MQTT\r\n"
+	    "domz idx mcp3421 number  : Set device Index number\r\n" 
+      "domz idx si7021 number   : Set device Index number\r\n" 
+      "domz idx sht10 number    : Set device Index number\r\n" 
+      "domz idx txt number      : Set device Index number\r\n" 
+      "domz idx p1sm number     : Set device Index number\r\n" 
+      "domz idx crt number      : Set device Index number\r\n" 
+      "domz idx elec number     : Set device Index number\r\n" 
+      "domz idx kwh number      : Set device Index number\r\n" 
+      "domz idx pct number      : Set device Index number\r\n" 
 	    "-- Examples\r\n" 
 	    "  domz host domoticz   => Set data server \r\n" 
 	    "  domz freq 300        => Send data to server every 5 minutes\r\n" 
@@ -245,7 +296,7 @@ const char HELP_SENSOR[] PROGMEM = 	"\r\n===== Sensors\r\n"
 	    "sens sht10 on|off  : Enable/Disable SHT10 external sensor\r\n" 
 	    "sens mcp3421 on|off: Enable/Disable ADC MCP3421 Power external sensor\r\n" 
 	    "sens freq f        : Set sensor measure interval each f sec\r\n" 
-
+     
 	    "sens temp led l,h   : Set RGB Led temperature warning low/High Range\r\n" 
 	    "sens hum led l,h    : Set RGB Led humidity warning low/High Range\r\n" 
 	    "-- Examples\r\n" 

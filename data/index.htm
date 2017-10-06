@@ -357,6 +357,7 @@
                 <br>
                 <div>
                     <form class="form-horizontal row-border" method="post" data-toggle="validator" id="frm_config" action="">
+
                         <!-- Panel Config générale -->
                         <div class="card card-outline-primary" id="pan_cfg">
                             <input type="hidden" name="save" value="1">
@@ -480,6 +481,90 @@
                             </div>
                         </div>
                         <!-- panel config -->
+                        <br>
+                        <!-- Panel MQTT -->
+                        <div class="card card-outline-warning" id="pan_mqtt">
+                            <div class="card-header card-warning clickable" data-toggle="collapse" data-parent="#pan_mqtt" data-target="#col_mqtt">
+                                <span class="fa fa-podcast"></span>&nbsp;MQTT (MQ Telemetry Transport)<span class="pull-right fa fa-chevron-down"></span>
+                            </div>
+                            <div class="card-collapse collapse in" id="col_mqtt">
+                                <div class="card-block">
+
+                                    <br>
+
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">MQTT</strong>
+                                        <div class="col-sm-9">
+                                            <div class="input-group">
+                                                <input class="checkbox-inline" id="cfg_mqtt" name="cfg_mqtt" type="checkbox" data-label-text="MQTT"> &nbsp;Change need Restart
+                                            </div>
+                                            <div class="help-block text-muted">Once enabled, MQTT broadcast need to be activated topic by topic (eg: Domoicz, ...)</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Broker</strong>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" style="width: 100%" id="mqtt_host" name="mqtt_host" maxlength="32" placeholder="Broker">
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Port</strong>
+                                        <div class="col-sm-9">
+                                            <input type="number" class="form-control" style="width: 100%" id="mqtt_port" name="mqtt_port" min="1" max="65535" placeholder="Port">
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Authentication</strong>
+                                        <div class="col-sm-9 input-group">
+                                            <input class="form-control" type="text" id="mqtt_user" name="mqtt_user" maxlength="16" placeholder="User">
+                                            <span class="input-group-addon">@</span>
+                                            <input class="form-control" type="password" id="mqtt_pass" name="mqtt_pass" maxlength="16" placeholder="Password">
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">In Topic (Hardcoded)</strong>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" style="width: 100%" id="mqtt_in" name="mqtt_in" maxlength="32" placeholder="In Topic" readonly>
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Out Topic (Hardcoded)</strong>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" style="width: 100%" id="mqtt_out" name="mqtt_out" maxlength="32" placeholder="Out Topic" readonly>
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">MQTT Protocol version (Hardcoded)</strong>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" style="width: 100%" id="mqtt_ver" name="mqtt_ver" maxlength="32" placeholder="MQTT Protocol version" value="3.1.1" readonly>
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">MQTT QoS (Hardcoded)</strong>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" style="width: 100%" id="mqtt_qos" name="mqtt_qos" maxlength="32" placeholder="MQTT QoS" value="0 - Almost Once" readonly>
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">MQTT Retain (Hardcoded)</strong>
+                                        <div class="col-sm-9">
+                                            <input class="checkbox-inline" id="mqtt_ret" name="mqtt_ret" type="checkbox" data-label-text="Retain" value="false" readonly>
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+
+                                <div class="card-footer">
+                                    <div class="text-center">
+                                        <div class="btn-group">
+                                            <button type="submit" class="btn btn-default btn-warning">Save</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- panel MQTT -->
                         <br>
                         <!-- Panel Tinfo -->
                         <div class="card card-outline-warning" id="pan_tinfo">
@@ -745,24 +830,6 @@
                                     <br>
 
                                     <div class="form-group form-inline">
-                                        <strong class="col-sm-3 control-label">Update interval</strong>
-                                        <div class="col-sm-9">
-                                            <select id="emon_port" name="emon_freq" class="form-control col-sm-2">
-														<option value="0">Disabled</option>
-														<option value="15">Every 15 seconds</option>
-														<option value="30">Every 30 seconds</option>
-														<option value="60">Every minute</option>
-														<option value="300">Every 5 minutes</option>
-														<option value="900">Every 15 minutes</option>
-														<option value="1800">Every 30 minutes</option>
-														<option value="3600">Every hour</option>
-														<option value="21600">Every 6 hours</option>
-														<option value="42300">Every 12 hours</option>
-														<option value="86400">Every day</option>
-													</select>
-                                        </div>
-                                    </div>
-                                    <div class="form-group form-inline">
                                         <strong class="col-sm-3 control-label">Port</strong>
                                         <div class="col-sm-9">
                                             <select id="emon_port" name="emon_port" class="form-control col-sm-2">
@@ -789,12 +856,44 @@
                                             <input type="text" class="form-control" style="width: 100%" id="emon_apikey" name="emon_apikey" maxlength="32" placeholder="API Key">
                                         </div>
                                     </div>
-
                                     <div class="form-group form-inline">
                                         <strong class="col-sm-3 control-label">Node ID</strong>
                                         <div class="col-sm-9">
                                             <input type="number" class="form-control" style="width: 100%" id="emon_node" name="emon_node" size="3" min="0" max="254" placeholder="Node ID">
                                             <span class="help-block text-muted">0 mean no node ID used.</span>
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">MQTT Out Topic</strong>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" style="width: 100%" id="emon_topic" name="emon_topic" maxlength="32" placeholder="MQTT Out Topic">
+                                        </div>
+                                    </div>
+                                   <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Update interval</strong>
+                                        <div class="col-sm-9">
+                                            <select id="emon_port" name="emon_freq" class="form-control col-sm-2">
+														<option value="0">Disabled</option>
+														<option value="15">Every 15 seconds</option>
+														<option value="30">Every 30 seconds</option>
+														<option value="60">Every minute</option>
+														<option value="300">Every 5 minutes</option>
+														<option value="900">Every 15 minutes</option>
+														<option value="1800">Every 30 minutes</option>
+														<option value="3600">Every hour</option>
+														<option value="21600">Every 6 hours</option>
+														<option value="42300">Every 12 hours</option>
+														<option value="86400">Every day</option>
+													</select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Broadcast Mode</strong>
+                                        <div class="col-sm-3">
+                                            <input class="checkbox-inline" id="emon_http" name="emon_http" type="checkbox" data-label-text="HTTP">
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <input class="checkbox-inline" id="emon_mqtt" name="emon_mqtt" type="checkbox" data-label-text="MQTT">
                                         </div>
                                     </div>
                                 </div>
@@ -848,6 +947,12 @@
                                         </div>
                                     </div>
                                     <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">MQTT Out Topic</strong>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" style="width: 100%" id="jdom_topic" name="jdom_topic" maxlength="32" placeholder="MQTT Out Topic">
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-inline">
                                         <strong class="col-sm-3 control-label">Update interval</strong>
                                         <div class="col-sm-9">
                                             <select id="jdom_freq" name="jdom_freq" class="form-control col-sm-2">
@@ -863,6 +968,15 @@
 														<option value="42300">Every 12 hours</option>
 														<option value="86400">Every day</option>
 													</select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Broadcast Mode</strong>
+                                        <div class="col-sm-3">
+                                            <input class="checkbox-inline" id="jdom_http" name="jdom_http" type="checkbox" data-label-text="HTTP">
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <input class="checkbox-inline" id="jdom_mqtt" name="jdom_mqtt" type="checkbox" data-label-text="MQTT">
                                         </div>
                                     </div>
                                     <div class="form-group form-inline">
@@ -918,6 +1032,13 @@
                                     </div>
 
                                     <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">MQTT Out Topic</strong>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" style="width: 100%" id="domz_topic" name="domz_topic" maxlength="32" placeholder="MQTT Out Topic">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group form-inline">
                                         <strong class="col-sm-3 control-label">Basic Authentication</strong>
                                         <div class="col-sm-9 input-group">
                                             <input class="form-control" type="text" id="domz_user" name="domz_user" maxlength="16" placeholder="User">
@@ -944,13 +1065,30 @@
 													</select>
                                         </div>
                                     </div>
+
                                     <div class="form-group form-inline">
-                                        <strong class="col-sm-3 control-label">Devices</strong>
+                                        <strong class="col-sm-3 control-label">Broadcast Mode</strong>
+                                        <div class="col-sm-3">
+                                            <input class="checkbox-inline" id="domz_http" name="domz_http" type="checkbox" data-label-text="HTTP">
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <input class="checkbox-inline" id="domz_mqtt" name="domz_mqtt" type="checkbox" data-label-text="MQTT">
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Sensors Devices</strong>
                                         <div class="col-sm-9">
-                                            <!--
-                                            <input type="number" class="form-control" id="domz_idx" name="domz_idx" size="5" min="0" max="65535" placeholder="Dev ID">
-                                            <span class="help-block">Numéro du device dans DomoticZ.</span>
-                                            -->
+                                            <input type="number" class="form-control" style="width: 100%" id="domz_idx_mcp3421" name="domz_idx_mcp3421" maxlength="3" placeholder="Electric">
+                                            <span class="help-block text-muted">Domoticz IDX for "Usage - Electric" device update (MCP3421)</span>
+                                            <input type="number" class="form-control" style="width: 100%" id="domz_idx_si7021" name="domz_idx_si7021" maxlength="3" placeholder="Temperature & Humidity">
+                                            <span class="help-block text-muted">Domoticz IDX for "Temp + Humidity" device update (SI7021)</span>
+                                            <input type="number" class="form-control" style="width: 100%" id="domz_idx_sht10" name="domz_idx_sht10" maxlength="3" placeholder="Temperature & Humidity">
+                                            <span class="help-block text-muted">Domoticz IDX for "Temp + Humidity" device update (SHT10)</span>
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">Electric Meter Devices</strong>
+                                        <div class="col-sm-9">
                                             <input type="number" class="form-control" style="width: 100%" id="domz_idx_txt" name="domz_idx_txt" maxlength="3" placeholder="ADCO">
                                             <span class="help-block text-muted">DomoticZ IDX for "General - Text" device update (ADCO)</span>
                                             <input type="number" class="form-control" style="width: 100%" id="domz_idx_p1sm" name="domz_idx_p1sm" maxlength="3" placeholder="P1 Smart Meter">
@@ -1070,7 +1208,7 @@
                                             <input class="checkbox-inline" id="cfg_oled" name="cfg_oled" type="checkbox" data-label-text="Display<br>&nbsp;"> &nbsp;&nbsp;
                                             <br><br>
                                             <input class="checkbox-inline" id="cfg_tinfo" name="cfg_tinfo" type="checkbox" data-disabled="true" data-label-text="Electric<br>Meter"> &nbsp;&nbsp;
-                                            
+
                                         </div>
                                     </div>
 
@@ -1138,6 +1276,9 @@
                                             <button class="btn btn-danger" type="button" id="btn_reboot">Restart Device</button>
                                         </div>
                                         <div class="btn-group">
+                                            <button class="btn btn-danger" type="button" data-toggle="modal" data-target="#confirm-rst">Config Reset</button>
+                                        </div>
+                                        <div class="btn-group">
                                             <button class="btn btn-danger" type="button" data-toggle="modal" data-target="#confirm-raz">Factory Reset</button>
                                         </div>
                                         <div class="btn-group">
@@ -1170,7 +1311,31 @@
     </div>
     <!-- Container -->
 
-    <!-- Modal Confirm -->
+    <!-- Modal Confirm RST -->
+    <div class="modal fade" id="confirm-rst" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title" id="myModalLabel">Please confirm config Reset</h4>
+                </div>
+                <div class="modal-body">
+                    <p>You are going to reset config to default, you'll need to setup back all option after this action and you'll maybe loosing this current Wifi access.</p>
+                    <p>All SPIFFS file system will remain intact.</p>
+                    <p>Are you really sure that is what you want to do?</p>
+                    <p class="debug-url"></p>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" data-dismiss="modal" id="btn_rst">Yes please, reset config</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Modal Confirm RST-->
+    
+    <!-- Modal Confirm RAZ -->
     <div class="modal fade" id="confirm-raz" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -1187,12 +1352,12 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" data-dismiss="modal" id="btn_reset">Yes please, erase all</button>
+                    <button type="button" class="btn btn-danger" data-dismiss="modal" id="btn_raz">Yes please, erase all</button>
                 </div>
             </div>
         </div>
     </div>
-    <!-- Modal Confirm -->
+    <!-- Modal Confirm RAZ-->
 
     <!-- Modal Wifi Scan -->
     <div class="modal fade" id="tab_scan" tabindex="-1" role="dialog" aria-hidden="true">

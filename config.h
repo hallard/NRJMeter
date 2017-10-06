@@ -24,13 +24,15 @@
 
 // Include main project include file
 #include "NRJMeter.h"
+#include "MQTT.h"
 
-#define CFG_SSID_SIZE 		32
-#define CFG_PSK_SIZE  		64
-#define CFG_DEFAULT_WMW   10
-#define CFG_HOSTNAME_SIZE 16
-#define CFG_USER_SIZE     16
-#define CFG_PASS_SIZE     16
+#define CFG_SSID_SIZE 		  32
+#define CFG_PSK_SIZE  		  64
+#define CFG_DEFAULT_WMW     10
+#define CFG_HOSTNAME_SIZE   16
+#define CFG_USER_SIZE       16
+#define CFG_PASS_SIZE       16
+#define CFG_MQTT_TOPIC_SIZE 32
 
 // ADCO Counter default value
 #define CFG_DEFAULT_ADCO "012345678910"
@@ -42,6 +44,8 @@
 #define CFG_EMON_DEFAULT_PORT 80
 #define CFG_EMON_DEFAULT_HOST "emoncms.org"
 #define CFG_EMON_DEFAULT_URL  "/input/post.json"
+#define CFG_EMON_DEFAULT_TOPIC  "emon"
+#define CFG_EMON_DEFAULT_BMODE 0x01 // HTTP Only by default
 
 // Config JeeDom
 #define CFG_JDOM_HOST_SIZE    32
@@ -50,6 +54,8 @@
 #define CFG_JDOM_DEFAULT_PORT 80
 #define CFG_JDOM_DEFAULT_HOST "jeedom.local"
 #define CFG_JDOM_DEFAULT_URL  "/jeedom/plugins/teleinfo/core/php/jeeTeleinfo.php"
+#define CFG_JDOM_DEFAULT_TOPIC  "sensor"
+#define CFG_JDOM_DEFAULT_BMODE 0x01 // HTTP Only by default
 
 // Config DomoticZ
 #define CFG_DOMZ_HOST_SIZE    32
@@ -58,10 +64,18 @@
 #define CFG_DOMZ_DEFAULT_PORT 80
 #define CFG_DOMZ_DEFAULT_HOST "domoticz.local"
 #define CFG_DOMZ_DEFAULT_URL  "/json.htm" //"/json.htm?type=command&param=udevice&nvalue=0"
+#define CFG_DOMZ_DEFAULT_TOPIC "domoticz/in"
+#define CFG_DOMZ_DEFAULT_BMODE 0x01 // HTTP Only by default
+
+// Config MQTT
+#define CFG_MQTT_HOST_SIZE       16
+#define CFG_MQTT_USER_SIZE       16
+#define CFG_MQTT_PASS_SIZE       16
+#define CFG_MQTT_DEFAULT_HOST    "mqtt.local"
+#define CFG_MQTT_DEFAULT_PORT    1883
 
 // Counters default debounce = 10ms
 #define CFG_COUNTER_DEFAULT_DELAY 10
-
 
 #define CFG_SENSORS_TEMP_MIN_WARN (18)
 #define CFG_SENSORS_TEMP_MAX_WARN (22)
@@ -94,7 +108,7 @@
 #define CFG_TINFO       0x0200  // Enable TInfo (any type: edf, dsm, ...)
 #define CFG_DEMO_MODE   0x0400  // Demo Mode
 #define CFG_LOGGER      0x0800  // Enable Debug to be printed to log.txt on SPIFFS
-#define CFG_FILLER3     0x1000  // Filler3
+#define CFG_MQTT        0x1000  // Enable MQTT
 #define CFG_STATIC      0x2000  // Enable Static IP
 #define CFG_WIFI        0x4000  // Enable Wifi
 #define CFG_BAD_CRC     0x8000  // Bad CRC when reading configuration
@@ -105,6 +119,13 @@
 #define CFG_TI_FILLER1   0x02 //Just in case we manage other Tinfo types (Deutch Smart Meter?)
 #define CFG_TI_FILLER2   0x04 //Just in case we manage other Tinfo types
 #define CFG_TI_FILLER3   0x08 //Just in case we manage other Tinfo types
+
+//Bit definition for different broadcast modes
+#define CFG_BMODE_NONE      0x00 //No broadcast
+#define CFG_BMODE_HTTP      0x01 //HTTP broadcast
+#define CFG_BMODE_MQTT      0x02 //MQTT broadcast
+#define CFG_BMODE_FILLER2   0x04 //Just in case we manage other Tinfo types
+#define CFG_BMODE_FILLER3   0x08 //Just in case we manage other Tinfo types
 
 // Show config and help sections
 #define CFG_HLP_ALL     0xFFFF
@@ -117,6 +138,7 @@
 #define CFG_HLP_DOMZ    0x0020
 #define CFG_HLP_COUNTER 0x0040
 #define CFG_HLP_TINFO   0x0080
+#define CFG_HLP_MQTT    0x0100
 
 #define CFG_SERIAL_BUFFER_SIZE 128
 
@@ -124,20 +146,22 @@
 #pragma pack(1)     // set alignment to 1 byte boundary
 
 // Config for emoncms
-// 128 Bytes
+// 256 Bytes
 typedef struct 
 {
   char  host[CFG_EMON_HOST_SIZE+1]; 		// FQDN 
   char  apikey[CFG_EMON_APIKEY_SIZE+1]; // Secret
   char  url[CFG_EMON_URL_SIZE+1];  			// Post URL
+  char  topic[CFG_MQTT_TOPIC_SIZE+1];   // MQTT In Topic (33 Bytes)
   uint32_t port;   									    // Protocol port (HTTP/HTTPS)
   uint32_t node;     									  // optional node
   uint32_t freq;                        // refresh rate
-  uint8_t filler[17];									  // in case adding data in config avoiding loosing current conf by bad crc*/
+  uint8_t bmode;                        // Bit field register (1 Byte) - Broadcast mode (HTTP, MQTT)
+  uint8_t filler[111];									// in case adding data in config avoiding loosing current conf by bad crc*/
 } _emoncms;
 
 // Config for sensors / Counter
-// 128 Bytes
+// 256 Bytes
 typedef struct 
 {
   int16_t temp_min_warn;  // Temperature offset min warning
@@ -153,32 +177,37 @@ typedef struct
   uint8_t filler01;       // in case adding data in config avoiding loosing current conf by bad crc*/
   uint32_t counter1;      // Counter 1
   uint32_t counter2;      // Counter 2
-  uint8_t filler[100];    // in case adding data in config avoiding loosing current conf by bad crc*/
+  uint8_t filler[228];    // in case adding data in config avoiding loosing current conf by bad crc*/
 } _sensors;
 
 // Config for jeedom
-// 160 Bytes
+// 256 Bytes
 typedef struct 
 {
   char  host[CFG_JDOM_HOST_SIZE+1];     // FQDN 
   char  apikey[CFG_JDOM_APIKEY_SIZE+1]; // Secret
   char  url[CFG_JDOM_URL_SIZE+1];       // Post URL
+  char  topic[CFG_MQTT_TOPIC_SIZE+1];   // MQTT In Topic (33 Bytes)
   char  adco[CFG_ADCO_SIZE+1];          // Identifiant compteur
   uint16_t port;                        // Protocol port (HTTP/HTTPS)
   uint32_t freq;                        // refresh rate
-  uint8_t filler[10];                   // in case adding data in config avoiding loosing current conf by bad crc*/
+  uint8_t bmode;                        // Bit field register (1 Byte) - Broadcast mode (HTTP, MQTT)
+  uint8_t filler[72];                  // in case adding data in config avoiding loosing current conf by bad crc*/
 } _jeedom;
 
 // Config for domoticz
-// 160 Bytes
+// 256 Bytes
 typedef struct 
 {
   char  host[CFG_DOMZ_HOST_SIZE+1];     // FQDN 
   char  user[CFG_USER_SIZE+1];          // user name
   char  pass[CFG_PASS_SIZE+1];          // password
   char  url[CFG_DOMZ_URL_SIZE+1];       // Post URL
+  char  topic[CFG_MQTT_TOPIC_SIZE+1];   // MQTT In Topic (33 Bytes)
   uint32_t freq;                        // refresh rate
-  /*uint16_t index;*/                       // Index
+  uint16_t idx_mcp3421;                 // Index device domoticz Electric (2 Byte)
+  uint16_t idx_si7021;                  // Index device domoticz Temp + Humidity (2 Byte)
+  uint16_t idx_sht10;                   // Index device domoticz Temp + Humidity (2 Byte)
   uint16_t idx_txt;                     // Index device domoticz Text (2 Byte)
   uint16_t idx_p1sm;                    // Index device domoticz P1 Smart Meter (2 Bytes)
   uint16_t idx_crt;                     // Index device domoticz Current (2 Bytes)
@@ -186,8 +215,21 @@ typedef struct
   uint16_t idx_kwh;                     // Index device domoticz Kwh (2 Byte)
   uint16_t idx_pct;                     // Index device domoticz Percentage (2 Byte)
   uint16_t port;                        // Protocol port (HTTP/HTTPS)
-  uint8_t filler[10];                   // in case adding data in config avoiding loosing current conf by bad crc*/
+  uint8_t bmode;                        // Bit field register (1 Byte) - Broadcast mode (HTTP, MQTT)
+  uint8_t filler[66];                   // in case adding data in config avoiding loosing current conf by bad crc*/
 } _domoticz;
+
+
+// Config for MQTT
+// 256 Bytes
+typedef struct 
+{
+  char  host[CFG_MQTT_HOST_SIZE+1];     // Broker Hostname (17 Bytes)
+  uint16_t port;                  // MQTT port  (2 Bytes)
+  char  usr[CFG_MQTT_USER_SIZE+1];     // HTTP Authentication user (17 Bytes)
+  char  pwd[CFG_MQTT_PASS_SIZE+1];     // HTTP Authentication user (17 Bytes)
+  uint8_t filler[203];                 // in case adding data in config avoiding loosing current conf by bad crc*/
+} _mqtt;
 
 
 // Config for counters
@@ -212,7 +254,7 @@ typedef struct
 } _tinfo;
 
 // Config saved into eeprom
-// 2048 bytes total including CRC
+// 4096 bytes total including CRC
 typedef struct 
 {
   char  ssid[CFG_SSID_SIZE+1]; 		 // SSID (33 Bytes)
@@ -221,7 +263,7 @@ typedef struct
   char  ap_psk[CFG_PSK_SIZE+1];    // Access Point Pre shared key (65 Bytes)
   char  ap_ssid[CFG_SSID_SIZE+1];  // Access Point SSID name (33 Bytes)
   char  http_usr[CFG_USER_SIZE+1]; // HTTP Authentication user (17 Bytes)
-  char  http_pwd[CFG_PASS_SIZE+1]; // HTTP Authentication user (17 Bytes)
+  char  http_pwd[CFG_PASS_SIZE+1]; // HTTP Authentication password (17 Bytes)
   char  ota_auth[CFG_PSK_SIZE+1];  // OTA Authentication password (65 Bytes)
   uint32_t config;           		   // Bit field register  (4 Bytes)
   uint16_t ota_port;         		   // OTA port  (2 Bytes)
@@ -236,14 +278,15 @@ typedef struct
   uint32_t dns;                    // Static Wifi DNS server Address (4 Bytes)
   uint8_t  led_panel;              // LED Panel brigthness (1 Bytes)
   uint8_t wmw;                     // Wifi connect max wait in seconds (1 Bytes)
-  uint8_t  filler[41];      		   // in case adding data in config avoiding loosing current conf by bad crc (41 Bytes)
-  _emoncms emoncms;                // Emoncms configuration (128 Bytes)
-  _sensors sensors;                // Sensors configuration (128 Bytes)
-  _jeedom  jeedom;                 // JeeDom configuration (160 Bytes)
-  _domoticz domz;                  // Domoticz configuration (160 Bytes)
+  uint8_t  filler[512];      		   // in case adding data in config avoiding loosing current conf by bad crc (41 Bytes)
+  _mqtt mqtt;                      // MQTT configuration (256 Bytes)
+  _emoncms emoncms;                // Emoncms configuration (256 Bytes)
+  _sensors sensors;                // Sensors configuration (256 Bytes)
+  _jeedom  jeedom;                 // JeeDom configuration (256 Bytes)
+  _domoticz domz;                  // Domoticz configuration (256 Bytes)
   _counter counter;                // Counter configuration (32 Bytes)
   _tinfo tinfo;                    // TInfo configuration (16 Bytes)
-  uint8_t  filler1[1040];          // Another filler in case we need more (1040 Bytes)
+  uint8_t  filler1[1913];          // Another filler in case we need more
   uint16_t crc;                    // CRC (2 Bytes)
 } _Config;
 

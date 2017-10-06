@@ -158,6 +158,8 @@ extern unsigned long seconds;
 extern unsigned long wifi_connect_time;
 extern uint8_t heartbeat;
 extern boolean task_emoncms ;
+extern boolean task_jeedom ;
+extern boolean task_domoticz ;
 extern boolean task_sensors ;
 extern boolean task_reconf ;
 extern uint16_t power_samples;
