@@ -22,9 +22,6 @@
 
 #include "webclient.h"
 
-#include <map>
-#include <string>
-
 #include "TInfo.h"
 #include "MQTT.h"
 
@@ -89,69 +86,81 @@ boolean httpPost(char * host, uint16_t port, char * url)
 boolean jeedomPost(void)
 {
   boolean ret = false;
+  char buff[128];
   String json = "";
 
-  // Some basic checking
-  if (*config.jeedom.host) {
-    ValueList * me = tinfo.getList();
-    // Got at least one ?
-    if (me && me->next) {
-      String url ;
-      boolean skip_item;
+  String url ;
+  boolean skip_item;
 
-      url = *config.jeedom.url ? config.jeedom.url : "/";
-      url += "?";
+  url = *config.jeedom.url ? config.jeedom.url : "/";
+  url += "?";
 
-      // Config identifiant forcée ?
-      if (*config.jeedom.adco) {
-        url += F("ADCO=");
-        url += config.jeedom.adco;
-        url += "&";
+  // Config identifiant forcée ?
+  if (*config.jeedom.adco) {
+    url += F("ADCO=");
+    url += config.jeedom.adco;
+    url += "&";
+  }
+
+  url += F("api=") ;
+  url += config.jeedom.apikey;
+  url += F("&") ;
+
+  if (config.config & CFG_TINFO || config.config & CFG_DEMO_MODE)
+  {
+    //Ensure we get last TInfo values
+    updateTInfo();
+
+    std::map<std::string, std::string>::iterator iterator;
+
+    for (iterator = tinfo_values.begin(); iterator != tinfo_values.end(); iterator++) {
+      std::string k = iterator->first;
+      std::string v = iterator->second;
+      if (strcmp(k.c_str(), "ADCO") == 0 && *config.jeedom.adco) {
+        //ADCO overrided in config
       }
-
-      url += F("api=") ;
-      url += config.jeedom.apikey;
-      url += F("&") ;
-
-      // Loop thru the node
-      while (me->next) {
-        // go to next node
-        me = me->next;
-        skip_item = false;
-
-        // Si ADCO déjà renseigné, on le remet pas
-        if (!strcmp(me->name, "ADCO")) {
-          if (*config.jeedom.adco)
-            skip_item = true;
-        }
-
-        // Si Item virtuel, on le met pas
-        if (*me->name == '_')
-          skip_item = true;
-
-        // On doit ajouter l'item ?
-        if (!skip_item) {
-          url +=  me->name ;
-          url += "=" ;
-          url +=  me->value;
-          url += "&" ;
-        }
-      } // While me
-
-      if (config.jeedom.bmode & CFG_BMODE_HTTP)
+      else
       {
-        ret = httpPost( config.jeedom.host, config.jeedom.port, (char *) url.c_str()) ;
+        sprintf_P(buff, PSTR("%s=%s&"), k.c_str(), v.c_str());
+        url += buff;
       }
+    }
+  }
 
-      if (config.jeedom.bmode & CFG_BMODE_MQTT)
-      {
-        //TODO: To be checked if it's correct MQTT frame for jeedom
-        json += "not yet implemented";
-        ret = mqttPost(config.jeedom.topic, json.c_str());
-      }
+  // Does MCP3421 is enabled and seen
+  if (config.sensors.en_mcp3421 && config.config & CFG_MCP3421 || config.config & CFG_DEMO_MODE) {
+    sprintf_P(buff, PSTR("MCP3421=%s&"), String(mcp3421_power).c_str());
+    url += buff;
+  }
 
-    } // if me
-  } // if host
+  // Does SI7021 is enabled and seen
+  if (config.sensors.en_si7021 && config.config & CFG_SI7021 || config.config & CFG_DEMO_MODE) {
+    sprintf_P(buff, PSTR("int_temp=%s&int_hum=%s&"), String(si7021_temperature / 100.0).c_str(), String(si7021_humidity / 100.0).c_str());
+    url += buff;
+  }
+
+  // Does SHT10 is enabled and seen
+  if (config.sensors.en_sht10 && config.config & CFG_SHT10 || config.config & CFG_DEMO_MODE) {
+    sprintf_P(buff, PSTR("ext_temp=%s&ext_hum=%s&ext_hum_nc=%s&"),
+              String(sht1x_temperature / 100.0).c_str(),
+              String(sht1x_humidity / 100.0).c_str(),
+              String(sht1x_humidity_nc / 100.0).c_str()
+             );
+    url += buff;
+  }
+
+  if (config.jeedom.bmode & CFG_BMODE_HTTP)
+  {
+    ret = httpPost( config.jeedom.host, config.jeedom.port, (char *) url.c_str()) ;
+  }
+
+  if (config.jeedom.bmode & CFG_BMODE_MQTT)
+  {
+    //TODO: To be checked if it's correct MQTT frame for jeedom
+    json += "not yet implemented";
+    ret = mqttPost(config.jeedom.topic, json.c_str());
+  }
+
   return ret;
 }
 
@@ -167,54 +176,80 @@ boolean emoncmsPost(void)
   boolean ret = false;
   char buff[128];
 
-  // Some basic checking
-  if (*config.emoncms.host) {
-    String url ;
-    struct rst_info * p = ESP.getResetInfoPtr();
-    String json = "";
+  String url ;
+  struct rst_info * p = ESP.getResetInfoPtr();
+  String json = "";
 
-    url = *config.emoncms.url ? config.emoncms.url : "/";
+  url = *config.emoncms.url ? config.emoncms.url : "/";
 
-    sprintf_P(buff, PSTR("?node=%d&apikey=%s&json="), config.emoncms.node, config.emoncms.apikey) ;
-    url += buff;
-    sprintf_P(buff, PSTR("{uptime:%ld"), seconds) ;
-    url += buff;
-    json += buff;
+  sprintf_P(buff, PSTR("?node=%d&apikey=%s&json="), config.emoncms.node, config.emoncms.apikey) ;
+  url += buff;
+  sprintf_P(buff, PSTR("{uptime:%ld"), seconds) ;
+  url += buff;
+  json += buff;
 
-    // Does SI7021 is enabled and seen
-    if (config.sensors.en_si7021 && config.config & CFG_SI7021) {
-      sprintf_P(buff, PSTR(",int_temp:%s,int_hum:%s"), String(si7021_temperature / 100.0).c_str(), String(si7021_humidity / 100.0).c_str());
+  if (config.config & CFG_TINFO || config.config & CFG_DEMO_MODE)
+  {
+    //Ensure we get last TInfo values
+    updateTInfo();
+
+    std::map<std::string, std::string>::iterator iterator;
+
+    for (iterator = tinfo_values.begin(); iterator != tinfo_values.end(); iterator++) {
+      std::string k = iterator->first;
+      std::string v = iterator->second;
+      sprintf_P(buff, PSTR(",%s:%s"), k.c_str(), v.c_str());
       url += buff;
       json += buff;
     }
-    // Does SI7021 is enabled and seen
-    if (config.sensors.en_sht10 && config.config & CFG_SHT10) {
-      sprintf_P(buff, PSTR(",ext_temp:%s,ext_hum:%s,ext_hum_nc:%s"),
-                String(sht1x_temperature / 100.0).c_str(),
-                String(sht1x_humidity / 100.0).c_str(),
-                String(sht1x_humidity_nc / 100.0).c_str()
-               );
-      url += buff;
-      json += buff;
-    }
+  }
 
-    sprintf_P(buff, PSTR(",reset:%d}"), p->reason) ;
+  if ((config.sensors.en_mcp3421 && config.config & CFG_MCP3421) || (config.sensors.en_si7021 && config.config & CFG_SI7021) || (config.sensors.en_sht10 && config.config & CFG_SHT10)  || config.config & CFG_DEMO_MODE)
+  {
+    sensors_measure();
+  }
+
+  // Does MCP3421 is enabled and seen
+  if (config.sensors.en_mcp3421 && config.config & CFG_MCP3421 || config.config & CFG_DEMO_MODE) {
+    sprintf_P(buff, PSTR(",MCP3421:%s"), String(mcp3421_power).c_str());
     url += buff;
     json += buff;
-    
-    if (config.emoncms.bmode & CFG_BMODE_HTTP)
-    {
-      ret = httpPost( config.emoncms.host, config.emoncms.port, (char *) url.c_str()) ;
-    }
+  }
 
-    if (config.emoncms.bmode & CFG_BMODE_MQTT)
-    {
-      //TODO: To be checked if it's correct MQTT frame for emoncms
-      ret = mqttPost(config.emoncms.topic, json.c_str());
-    }
-} // if host
+  // Does SI7021 is enabled and seen
+  if (config.sensors.en_si7021 && config.config & CFG_SI7021 || config.config & CFG_DEMO_MODE) {
+    sprintf_P(buff, PSTR(",int_temp:%s,int_hum:%s"), String(si7021_temperature / 100.0).c_str(), String(si7021_humidity / 100.0).c_str());
+    url += buff;
+    json += buff;
+  }
 
-return ret;
+  // Does SHT10 is enabled and seen
+  if (config.sensors.en_sht10 && config.config & CFG_SHT10 || config.config & CFG_DEMO_MODE) {
+    sprintf_P(buff, PSTR(",ext_temp:%s,ext_hum:%s,ext_hum_nc:%s"),
+              String(sht1x_temperature / 100.0).c_str(),
+              String(sht1x_humidity / 100.0).c_str(),
+              String(sht1x_humidity_nc / 100.0).c_str()
+             );
+    url += buff;
+    json += buff;
+  }
+
+  sprintf_P(buff, PSTR(",reset:%d}"), p->reason) ;
+  url += buff;
+  json += buff;
+
+  if (config.emoncms.bmode & CFG_BMODE_HTTP)
+  {
+    ret = httpPost( config.emoncms.host, config.emoncms.port, (char *) url.c_str()) ;
+  }
+
+  if (config.emoncms.bmode & CFG_BMODE_MQTT)
+  {
+    //TODO: To be checked if it's correct MQTT frame for emoncms
+    ret = mqttPost(config.emoncms.topic, json.c_str());
+  }
+
+  return ret;
 }
 
 
@@ -229,36 +264,20 @@ boolean domoticzPost(void)
 {
   boolean ret = true;
 
-  ValueList * me = tinfo.getList();
-  std::map<std::string, std::string>  meMap;
-
   String baseurl;
   String url;
 
   baseurl = *config.domz.url ? config.domz.url : "/";
   baseurl += F("?type=command&param=udevice&");
 
-  // Got at least one ?
-  if (me && me->next) {
-    // Loop thru the node
-    while (me->next) {
-      // go to next node
-      me = me->next;
-      // Si Item virtuel, on le met pas
-      if (*me->name == '_')
-      {
-        //Nothing
-      }
-      else
-      {
-        meMap[me->name] = me->value;
-      }
-
-    } // While me
+  if (config.config & CFG_TINFO || config.config & CFG_DEMO_MODE)
+  {
+    //Ensure we get last TInfo values
+    updateTInfo();
 
     // HTTP: /json.htm?type=command&param=udevice&idx=IDX&nvalue=0&svalue=TXT
     // MQTT: '{ "idx" : 1, "nvalue" : 0, "svalue" : "25.0" }'
-    if (config.domz.idx_txt > 0)
+    if (config.domz.idx_txt > 0 && tinfo_values.find("ADCO") != tinfo_values.end())
     {
       if (config.domz.bmode & CFG_BMODE_HTTP)
       {
@@ -267,7 +286,7 @@ boolean domoticzPost(void)
         url += config.domz.idx_txt;
         url += "&nvalue=0";
         url += "&svalue=";
-        url += meMap["ADCO"].c_str();
+        url += tinfo_values["ADCO"].c_str();
 
         if (!httpPost( config.domz.host, config.domz.port, (char *) url.c_str()))
         {
@@ -283,7 +302,7 @@ boolean domoticzPost(void)
         jsonmqtt["idx"] = config.domz.idx_txt;
         jsonmqtt["nvalue"] = 0;
         String svalue = "";
-        svalue += meMap["ADCO"].c_str();
+        svalue += tinfo_values["ADCO"].c_str();
         jsonmqtt["svalue"] = svalue.c_str();
 
         jsonmqtt.printTo(jsonmqttStr);
@@ -293,22 +312,11 @@ boolean domoticzPost(void)
           ret = false;
         }
       }
-
-
-      /*
-        Info(config.domz.host);
-        InfoF(":");
-        Info(config.domz.port);
-        Infoln((char *) url.c_str());
-        InfoF("ret=");
-        Infoln(ret);
-        Infoflush();
-      */
     }
 
     // HTML: /json.htm?type=command&param=udevice&idx=IDX&nvalue=0&svalue=USAGE1;USAGE2;RETURN1;RETURN2;CONS;PROD
     // MQTT: '{ "idx" : 1, "nvalue" : 0, "svalue" : "25.0" }'
-    if (config.domz.idx_p1sm > 0)
+    if (config.domz.idx_p1sm > 0 && tinfo_values.find("BASE") != tinfo_values.end() && tinfo_values.find("PAPP") != tinfo_values.end())
     {
       if (config.domz.bmode & CFG_BMODE_HTTP)
       {
@@ -317,9 +325,9 @@ boolean domoticzPost(void)
         url += config.domz.idx_p1sm;
         url += "&nvalue=0";
         url += "&svalue=";
-        url += String(atoi(meMap["BASE"].c_str())).c_str();
+        url += String(atoi(tinfo_values["BASE"].c_str())).c_str();
         url += ";0;0;0;";
-        url += String(atoi(meMap["PAPP"].c_str())).c_str();
+        url += String(atoi(tinfo_values["PAPP"].c_str())).c_str();
         url += ";0";
 
         if (!httpPost( config.domz.host, config.domz.port, (char *) url.c_str()))
@@ -336,9 +344,9 @@ boolean domoticzPost(void)
         jsonmqtt["idx"] = config.domz.idx_p1sm;
         jsonmqtt["nvalue"] = 0;
         String svalue = "";
-        svalue += String(atoi(meMap["BASE"].c_str())).c_str();
+        svalue += String(atoi(tinfo_values["BASE"].c_str())).c_str();
         svalue += ";0;0;0;";
-        svalue += String(atoi(meMap["PAPP"].c_str())).c_str();
+        svalue += String(atoi(tinfo_values["PAPP"].c_str())).c_str();
         svalue += ";0";
         jsonmqtt["svalue"] = svalue.c_str();
 
@@ -349,21 +357,11 @@ boolean domoticzPost(void)
           ret = false;
         }
       }
-
-      /*
-        Info(config.domz.host);
-        InfoF(":");
-        Info(config.domz.port);
-        Infoln((char *) url.c_str());
-        InfoF("ret=");
-        Infoln(ret);
-        Infoflush();
-      */
     }
 
     // HTML: /json.htm?type=command&param=udevice&idx=IDX&nvalue=0&svalue=ENERGY
     // MQTT: '{ "idx" : 1, "nvalue" : 0, "svalue" : "25.0" }'
-    if (config.domz.idx_crt > 0)
+    if (config.domz.idx_crt > 0 && tinfo_values.find("IINST") != tinfo_values.end())
     {
       if (config.domz.bmode & CFG_BMODE_HTTP)
       {
@@ -372,7 +370,7 @@ boolean domoticzPost(void)
         url += config.domz.idx_crt;
         url += "&nvalue=0";
         url += "&svalue=";
-        url += String(atoi(meMap["IINST"].c_str())).c_str();
+        url += String(atoi(tinfo_values["IINST"].c_str())).c_str();
 
         if (!httpPost( config.domz.host, config.domz.port, (char *) url.c_str()))
         {
@@ -388,7 +386,7 @@ boolean domoticzPost(void)
         jsonmqtt["idx"] = config.domz.idx_crt;
         jsonmqtt["nvalue"] = 0;
         String svalue = "";
-        svalue += String(atoi(meMap["IINST"].c_str())).c_str();
+        svalue += String(atoi(tinfo_values["IINST"].c_str())).c_str();
         jsonmqtt["svalue"] = svalue.c_str();
 
         jsonmqtt.printTo(jsonmqttStr);
@@ -398,21 +396,11 @@ boolean domoticzPost(void)
           ret = false;
         }
       }
-
-      /*
-        Info(config.domz.host);
-        InfoF(":");
-        Info(config.domz.port);
-        Infoln((char *) url.c_str());
-        InfoF("ret=");
-        Infoln(ret);
-        Infoflush();
-      */
     }
 
     // HTTP: /json.htm?type=command&param=udevice&idx=IDX&nvalue=0&svalue=ENERGY
     // MQTT: '{ "idx" : 1, "nvalue" : 0, "svalue" : "25.0" }'
-    if (config.domz.idx_elec > 0)
+    if (config.domz.idx_elec > 0 && tinfo_values.find("PAPP") != tinfo_values.end())
     {
       if (config.domz.bmode & CFG_BMODE_HTTP)
       {
@@ -421,7 +409,7 @@ boolean domoticzPost(void)
         url += config.domz.idx_elec;
         url += "&nvalue=0";
         url += "&svalue=";
-        url += String(atoi(meMap["PAPP"].c_str())).c_str();
+        url += String(atoi(tinfo_values["PAPP"].c_str())).c_str();
 
         if (!httpPost( config.domz.host, config.domz.port, (char *) url.c_str()))
         {
@@ -437,7 +425,7 @@ boolean domoticzPost(void)
         jsonmqtt["idx"] = config.domz.idx_elec;
         jsonmqtt["nvalue"] = 0;
         String svalue = "";
-        svalue += String(atoi(meMap["PAPP"].c_str())).c_str();
+        svalue += String(atoi(tinfo_values["PAPP"].c_str())).c_str();
         jsonmqtt["svalue"] = svalue.c_str();
 
         jsonmqtt.printTo(jsonmqttStr);
@@ -447,21 +435,11 @@ boolean domoticzPost(void)
           ret = false;
         }
       }
-
-      /*
-        Info(config.domz.host);
-        InfoF(":");
-        Info(config.domz.port);
-        Infoln((char *) url.c_str());
-        InfoF("ret=");
-        Infoln(ret);
-        Infoflush();
-      */
     }
 
     // HTTP: /json.htm?type=command&param=udevice&idx=IDX&nvalue=0&svalue=POWER,ENERGY
     // MQTT: '{ "idx" : 1, "nvalue" : 0, "svalue" : "25.0" }'
-    if (config.domz.idx_kwh > 0)
+    if (config.domz.idx_kwh > 0 && tinfo_values.find("PAPP") != tinfo_values.end())
     {
       if (config.domz.bmode & CFG_BMODE_HTTP)
       {
@@ -470,9 +448,9 @@ boolean domoticzPost(void)
         url += config.domz.idx_kwh;
         url += "&nvalue=0";
         url += "&svalue=";
-        url += String(atoi(meMap["PAPP"].c_str())).c_str();
+        url += String(atoi(tinfo_values["PAPP"].c_str())).c_str();
         url += ";0";
-        //url += String(atoi(meMap["IINST"].c_str())).c_str(); Computed by Domoticz
+        //url += String(atoi(tinfo_values["IINST"].c_str())).c_str(); Computed by Domoticz
 
         if (!httpPost( config.domz.host, config.domz.port, (char *) url.c_str()))
         {
@@ -488,7 +466,7 @@ boolean domoticzPost(void)
         jsonmqtt["idx"] = config.domz.idx_kwh;
         jsonmqtt["nvalue"] = 0;
         String svalue = "";
-        svalue += String(atoi(meMap["PAPP"].c_str())).c_str();
+        svalue += String(atoi(tinfo_values["PAPP"].c_str())).c_str();
         svalue += ";0";
         jsonmqtt["svalue"] = svalue.c_str();
 
@@ -499,21 +477,11 @@ boolean domoticzPost(void)
           ret = false;
         }
       }
-
-      /*
-        Info(config.domz.host);
-        InfoF(":");
-        Info(config.domz.port);
-        Infoln((char *) url.c_str());
-        InfoF("ret=");
-        Infoln(ret);
-        Infoflush();
-      */
     }
 
     // HTTP: /json.htm?type=command&param=udevice&idx=IDX&nvalue=0&svalue=PERCENTAGE
     // MQTT: '{ "idx" : 1, "nvalue" : 0, "svalue" : "25.0" }'
-    if (config.domz.idx_pct > 0)
+    if (config.domz.idx_pct > 0 && tinfo_values.find("IINST") != tinfo_values.end() && tinfo_values.find("ISOUSC") != tinfo_values.end())
     {
       if (config.domz.bmode & CFG_BMODE_HTTP)
       {
@@ -522,7 +490,7 @@ boolean domoticzPost(void)
         url += config.domz.idx_pct;
         url += "&nvalue=0";
         url += "&svalue=";
-        url += String( roundf((atof(meMap["IINST"].c_str()) * 100) / atof(meMap["ISOUSC"].c_str()) * 100) / 100 ).c_str();
+        url += String( roundf((atof(tinfo_values["IINST"].c_str()) * 100) / atof(tinfo_values["ISOUSC"].c_str()) * 100) / 100 ).c_str();
 
         if (!httpPost( config.domz.host, config.domz.port, (char *) url.c_str()))
         {
@@ -538,7 +506,7 @@ boolean domoticzPost(void)
         jsonmqtt["idx"] = config.domz.idx_pct;
         jsonmqtt["nvalue"] = 0;
         String svalue = "";
-        svalue += String( roundf((atof(meMap["IINST"].c_str()) * 100) / atof(meMap["ISOUSC"].c_str()) * 100) / 100 ).c_str();
+        svalue += String( roundf((atof(tinfo_values["IINST"].c_str()) * 100) / atof(tinfo_values["ISOUSC"].c_str()) * 100) / 100 ).c_str();
         jsonmqtt["svalue"] = svalue.c_str();
 
         jsonmqtt.printTo(jsonmqttStr);
@@ -548,19 +516,8 @@ boolean domoticzPost(void)
           ret = false;
         }
       }
-
-      /*
-        Info(config.domz.host);
-        InfoF(":");
-        Info(config.domz.port);
-        Infoln((char *) url.c_str());
-        InfoF("ret=");
-        Infoln(ret);
-        Infoflush();
-      */
     }
-
-  } // if me
+  }
 
   // Do a measurment
   sensors_measure();

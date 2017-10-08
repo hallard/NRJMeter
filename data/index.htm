@@ -356,6 +356,55 @@
             <div class="tab-pane fade" id="tab_cfg">
                 <br>
                 <div>
+
+
+                    <!-- Panel Config -->
+                    <div class="card card-outline-danger" id="pan_impexp">
+                        <div class="card-header card-danger clickable" data-toggle="collapse" data-parent="#pan_impexp" data-target="#col_impexp">
+                            <span class="fa fa-file-text-o"></span>&nbsp;Configuration Management<span class="pull-right fa fa-chevron-up"></span>
+                        </div>
+                        <div class="card-collapse collapse in" id="col_impexp">
+                            <div class="card-block">
+
+                                <br>
+                                <div class="form-group form-inline">
+                                    <strong class="col-sm-3 control-label">Export</strong>
+                                    <div class="col-sm-9">
+                                        <div class="input-group">
+                                            <button class="btn btn-danger" type="button" id="btn_export">Export</button>
+                                        </div>
+                                        <div class="help-block text-muted">Current configuration will be save to nrjmetter.config</div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group form-inline">
+                                    <strong class="col-sm-3 control-label">Import</strong>
+                                    <div class="col-sm-9">
+                                        <div class="input-group">
+                                            <span class="input-group-btn">
+												<span class="btn btn-danger btn-file">Choose file&hellip; 
+													<input id="file_cfg" type="file" name="file_cfg"/>
+												</span>
+                                            </span>
+                                            <input id="txt_load_cfg" type="text" size="32" class="form-control" placeholder="No nrjmeter.config file selected" readonly>
+                                            <button class="btn btn-danger" type="button" id="btn_import" disabled>Import</button>
+                                        </div>
+                                        <div class="help-block text-muted">Current configuration will be overwritten with selected nrjmetter.config</div>
+                                    </div>
+                                </div>
+
+                            </div>
+                            <!-- panel body-->
+                            <div class="card-footer">
+                                <div class="text-center">
+                                    <!-- Nothing yet -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Panel Config -->
+                    <br>
+
                     <form class="form-horizontal row-border" method="post" data-toggle="validator" id="frm_config" action="">
 
                         <!-- Panel Config générale -->
@@ -483,8 +532,8 @@
                         <!-- panel config -->
                         <br>
                         <!-- Panel MQTT -->
-                        <div class="card card-outline-warning" id="pan_mqtt">
-                            <div class="card-header card-warning clickable" data-toggle="collapse" data-parent="#pan_mqtt" data-target="#col_mqtt">
+                        <div class="card card-outline-mqtt" id="pan_mqtt">
+                            <div class="card-header card-mqtt clickable" data-toggle="collapse" data-parent="#pan_mqtt" data-target="#col_mqtt">
                                 <span class="fa fa-podcast"></span>&nbsp;MQTT (MQ Telemetry Transport)<span class="pull-right fa fa-chevron-down"></span>
                             </div>
                             <div class="card-collapse collapse in" id="col_mqtt">
@@ -552,13 +601,13 @@
                                             <input class="checkbox-inline" id="mqtt_ret" name="mqtt_ret" type="checkbox" data-label-text="Retain" value="false" readonly>
                                         </div>
                                     </div>
-                                    
+
                                 </div>
 
                                 <div class="card-footer">
                                     <div class="text-center">
                                         <div class="btn-group">
-                                            <button type="submit" class="btn btn-default btn-warning">Save</button>
+                                            <button type="submit" class="btn btn-default btn-mqtt">Save</button>
                                         </div>
                                     </div>
                                 </div>
@@ -567,8 +616,8 @@
                         <!-- panel MQTT -->
                         <br>
                         <!-- Panel Tinfo -->
-                        <div class="card card-outline-warning" id="pan_tinfo">
-                            <div class="card-header card-warning clickable" data-toggle="collapse" data-parent="#pan_tinfo" data-target="#col_tinfo">
+                        <div class="card card-outline-tinfo" id="pan_tinfo">
+                            <div class="card-header card-tinfo clickable" data-toggle="collapse" data-parent="#pan_tinfo" data-target="#col_tinfo">
                                 <span class="fa fa-flash"></span>&nbsp;Eletric Meter<span class="pull-right fa fa-chevron-down"></span>
                             </div>
                             <div class="card-collapse collapse in" id="col_tinfo">
@@ -582,7 +631,7 @@
                                             <input class="checkbox-inline" id="tinfo_edf" name="tinfo_edf" type="checkbox" data-label-text="EDF (téléinformation)">
                                         </div>
                                         <div class="cold-sm-3">
-                                            <input class="checkbox-inline disabled" id="tinfo_dsm" name="tinfo_edsm" type="checkbox" data-label-text="Deutch Smart&nbsp;Meter">
+                                            <input class="checkbox-inline disabled" id="tinfo_dsm" name="tinfo_dsm" type="checkbox" data-label-text="Deutch Smart&nbsp;Meter">
                                         </div>
                                     </div>
                                     <!--
@@ -669,7 +718,7 @@
                                 <div class="card-footer">
                                     <div class="text-center">
                                         <div class="btn-group">
-                                            <button type="submit" class="btn btn-default btn-warning">Save</button>
+                                            <button type="submit" class="btn btn-default btn-tinfo">Save</button>
                                         </div>
                                     </div>
                                 </div>
@@ -869,7 +918,7 @@
                                             <input type="text" class="form-control" style="width: 100%" id="emon_topic" name="emon_topic" maxlength="32" placeholder="MQTT Out Topic">
                                         </div>
                                     </div>
-                                   <div class="form-group form-inline">
+                                    <div class="form-group form-inline">
                                         <strong class="col-sm-3 control-label">Update interval</strong>
                                         <div class="col-sm-9">
                                             <select id="emon_port" name="emon_freq" class="form-control col-sm-2">
@@ -909,8 +958,8 @@
                         <!-- panel emoncms -->
                         <br>
                         <!-- Panel Jeedom -->
-                        <div class="card card-outline-warning" id="pan_jdom">
-                            <div class="card-header card-warning clickable" data-toggle="collapse" data-parent="#pan_jdom" data-target="#col_jdom">
+                        <div class="card card-outline-success" id="pan_jdom">
+                            <div class="card-header card-success clickable" data-toggle="collapse" data-parent="#pan_jdom" data-target="#col_jdom">
                                 <span class="fa fa-home"></span>&nbsp;Jeedom<span class="pull-right fa fa-chevron-down"></span>
                             </div>
                             <div class="card-collapse collapse out" id="col_jdom">
@@ -990,7 +1039,7 @@
                                 <div class="card-footer">
                                     <div class="text-center">
                                         <div class="btn-group">
-                                            <button type="submit" class="btn btn-default btn-warning">Save</button>
+                                            <button type="submit" class="btn btn-default btn-success">Save</button>
                                         </div>
                                     </div>
                                 </div>
@@ -999,8 +1048,8 @@
                         <!-- panel Jeedom -->
                         <br>
                         <!-- Panel domoticz -->
-                        <div class="card card-outline-warning" id="pan_domz">
-                            <div class="card-header card-warning clickable" data-toggle="collapse" data-parent="#pan_domz" data-target="#col_domz">
+                        <div class="card card-outline-success" id="pan_domz">
+                            <div class="card-header card-success clickable" data-toggle="collapse" data-parent="#pan_domz" data-target="#col_domz">
                                 <span class="fa fa-link"></span>&nbsp;Domoticz<span class="pull-right fa fa-chevron-down"></span>
                             </div>
                             <div class="card-collapse collapse out" id="col_domz">
@@ -1107,7 +1156,7 @@
                                 <div class="card-footer">
                                     <div class="text-center">
                                         <div class="btn-group">
-                                            <button type="submit" class="btn btn-default btn-warning">Save</button>
+                                            <button type="submit" class="btn btn-default btn-success">Save</button>
                                         </div>
                                     </div>
                                 </div>
@@ -1131,7 +1180,7 @@
 
                                             <h6>IO Pin</h6>&nbsp;
                                             <select id="cnt_io_1" name="cnt_io_1" class="form-control">
-														<option value="255">Disabled</option>
+														<option value="0">Disabled</option>
 														<option value="2">GPIO2</option>
 														<option value="12">GPIO12</option>
 														<option value="13">GPIO13</option>
@@ -1155,7 +1204,7 @@
 
                                             <h6>IO Pin</h6>&nbsp;
                                             <select id="cnt_io_1" name="cnt_io_2" class="form-control">
-														<option value="255">Disabled</option>
+														<option value="0">Disabled</option>
 														<option value="2">GPIO2</option>
 														<option value="12">GPIO12</option>
 														<option value="13">GPIO13</option>
@@ -1334,7 +1383,7 @@
         </div>
     </div>
     <!-- Modal Confirm RST-->
-    
+
     <!-- Modal Confirm RAZ -->
     <div class="modal fade" id="confirm-raz" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
         <div class="modal-dialog">

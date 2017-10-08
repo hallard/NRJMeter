@@ -1,4 +1,5 @@
 var ws;
+var f;
 var el_timer;
 var counters = {};
 var elapsed = 0;
@@ -492,6 +493,192 @@ function refreshSpiffs() {
     })
 }
 
+function fillConfigForm(data) {
+
+    var tinfo_edf = data["tinfo_edf"] == 1 ? true : false;
+    var tinfo_dsm = data["tinfo_dsm"] == 1 ? true : false;
+    var sens_si7021 = data["sens_si7021"] == 1 ? true : false;
+    var sens_sht10 = data["sens_sht10"] == 1 ? true : false;
+    var sens_mcp3421 = data["sens_mcp3421"] == 1 ? true : false;
+
+    var has_tinfo_edf = data["has_tinfo_edf"] == 1 ? true : false;
+    var has_tinfo_dsm = data["has_tinfo_dsm"] == 1 ? true : false;
+    var has_si7021 = data["has_si7021"] == 1 ? true : false;
+    var has_sht10 = data["has_sht10"] == 1 ? true : false;
+    var has_mcp3421 = data["has_mcp3421"] == 1 ? true : false;
+    var has_oled = data["has_oled"] == 1 ? true : false;
+
+    var cfg_ap = data["cfg_ap"] == 1 ? true : false;
+    var cfg_wifi = data["cfg_wifi"] == 1 ? true : false;
+    var cfg_mqtt = data["cfg_mqtt"] == 1 ? true : false;
+    var cfg_debug = data["cfg_debug"] == 1 ? true : false;
+    var cfg_logger = data["cfg_logger"] == 1 ? true : false;
+    var cfg_tinfo = data["cfg_tinfo"] == 1 ? true : false;
+    var cfg_demo = data["cfg_demo"] == 1 ? true : false;
+    var cfg_rgb = data["cfg_rgb"] == 1 ? true : false;
+    var cfg_oled = data["cfg_oled"] == 1 ? true : false;
+    var cfg_static = data["cfg_static"] == 1 ? true : false;
+
+    //var tinfo_pwr_led = JSON.parse("[" + data["tinfo_pwr_led"] + "]");
+    //var tinfo_nrj_led = JSON.parse("[" + data["tinfo_nrj_led"] + "]");
+    var sens_temp_led = JSON.parse("[" + data["sens_temp_led"] + "]");
+    var sens_hum_led = JSON.parse("[" + data["sens_hum_led"] + "]");
+    var sens_pwr_led = JSON.parse("[" + data["sens_pwr_led"] + "]");
+    var led_panel = data["led_panel"];
+
+
+    var mqtt_ret = data["mqtt_ret"] == 1 ? true : false;
+
+    var cfg_led_bright = data["cfg_led_bright"];
+    var cfg_led_hb = data["cfg_led_hb"];
+
+    var emon_http = data["emon_http"] == 1 ? true : false;
+    var emon_mqtt = data["emon_mqtt"] == 1 ? true : false;
+
+    var jdom_http = data["jdom_http"] == 1 ? true : false;
+    var jdom_mqtt = data["jdom_mqtt"] == 1 ? true : false;
+
+    var domz_http = data["domz_http"] == 1 ? true : false;
+    var domz_mqtt = data["domz_mqtt"] == 1 ? true : false;
+
+    $("#frm_config").autofill(data);
+
+    $("#cfg_mqtt").bootstrapSwitch({
+        state: cfg_mqtt,
+        onColor: "success"
+    });
+
+    $("#mqtt_ret").bootstrapSwitch({
+        state: mqtt_ret,
+        onColor: "success"
+    });
+
+    $("#emon_http").bootstrapSwitch({
+        state: emon_http,
+        onColor: "success"
+    });
+
+    $("#emon_mqtt").bootstrapSwitch({
+        state: emon_mqtt,
+        onColor: "success"
+    });
+
+    $("#jdom_http").bootstrapSwitch({
+        state: jdom_http,
+        onColor: "success"
+    });
+
+    $("#jdom_mqtt").bootstrapSwitch({
+        state: jdom_mqtt,
+        onColor: "success"
+    });
+
+    $("#domz_http").bootstrapSwitch({
+        state: domz_http,
+        onColor: "success"
+    });
+
+    $("#domz_mqtt").bootstrapSwitch({
+        state: domz_mqtt,
+        onColor: "success"
+    });
+
+    $("#tinfo_edf").bootstrapSwitch({
+        state: tinfo_edf,
+        onColor: has_tinfo_edf ? "success" : "warning",
+        offColor: has_tinfo_edf ? "danger" : "warning"
+    });
+
+    $("#tinfo_dsm").bootstrapSwitch({
+        state: tinfo_dsm,
+        onColor: has_tinfo_dsm ? "success" : "warning",
+        offColor: has_tinfo_dsm ? "danger" : "warning"
+    });
+    /*
+    $("#tinfo_pwr_led").slider({
+        id: "tinfo_pwr_led",
+        value: tinfo_pwr_led,
+        formatter: function (v) {
+            return sliderFormatter('tinfo', v, 'led', 'W');
+        }
+    });
+    $("#tinfo_nrj_led").slider({
+        id: "tinfo_nrj_led",
+        value: tinfo_nrj_led,
+        formatter: function (v) {
+            return sliderFormatter('tinfo', v, 'led', 'A');
+        }
+    });
+    */
+    $("#sens_temp_led").slider({
+        id: "slider_temp_led",
+        value: sens_temp_led,
+        formatter: function (v) {
+            return sliderFormatter('sens', v, 'led', '°C');
+        }
+    });
+    $("#sens_hum_led").slider({
+        id: "slider_hum_led",
+        value: sens_hum_led,
+        formatter: function (v) {
+            return sliderFormatter('sens', v, 'led', '%');
+        }
+    });
+    $("#sens_pwr_led").slider({
+        id: "slider_pwr_led",
+        value: sens_pwr_led,
+        formatter: function (v) {
+            return sliderFormatter('sens', v, 'led', 'W');
+        }
+    });
+
+    $("#cfg_led_bright").slider({
+        id: "slider_led_bright",
+        value: cfg_led_bright,
+        formatter: function (v) {
+            return v + '%';
+        }
+    });
+    $("#cfg_led_hb").slider({
+        id: "slider_led_hb",
+        value: cfg_led_hb,
+        formatter: function (v) {
+            return (v / 10) + 's';
+        }
+    });
+
+    $("#sens_si7021").bootstrapSwitch({
+        state: sens_si7021,
+        onColor: has_si7021 ? "success" : "warning",
+        offColor: has_si7021 ? "danger" : "warning"
+    });
+    $("#sens_sht10").bootstrapSwitch({
+        state: sens_sht10,
+        onColor: has_sht10 ? "success" : "warning",
+        offColor: has_sht10 ? "danger" : "warning"
+    });
+    $("#sens_mcp3421").bootstrapSwitch({
+        state: sens_mcp3421,
+        onColor: has_mcp3421 ? "success" : "warning",
+        offColor: has_mcp3421 ? "danger" : "warning"
+    });
+
+    $("#cfg_oled").bootstrapSwitch({
+        state: cfg_oled,
+        onColor: has_oled ? "success" : "warning",
+        offColor: has_oled ? "danger" : "warning"
+    });
+    $("#cfg_ap").bootstrapSwitch('state', cfg_ap);
+    $("#cfg_wifi").bootstrapSwitch('state', cfg_wifi);
+    $("#cfg_debug").bootstrapSwitch('state', cfg_debug);
+    $("#cfg_logger").bootstrapSwitch('state', cfg_logger);
+    $("#cfg_rgb").bootstrapSwitch('state', cfg_rgb);
+    $("#cfg_demo").bootstrapSwitch('state', cfg_demo);
+    $("#cfg_tinfo").bootstrapSwitch('state', cfg_tinfo);
+    $("#cfg_tinfo").bootstrapSwitch('disabled', true);
+    $("#cfg_static").bootstrapSwitch('state', cfg_static);
+}
+
 // We clicked on a tab 
 $('a[data-toggle=\"tab\"]').on('shown.bs.tab', function (e) {
     var target = $(e.target).attr("href")
@@ -528,198 +715,16 @@ $('a[data-toggle=\"tab\"]').on('shown.bs.tab', function (e) {
         $("#tab_edit_frm").attr("src", "/edit.htm");
         //onBodyLoad();
     } else if (target == '#tab_term') {
-        setTimeout(function(){term.focus(true)},500);
+        setTimeout(function () {
+            term.focus(true)
+        }, 500);
     } else if (target == '#tab_fs') {
         refreshSpiffs();
         // Configuration Tab activation
     } else if (target == '#tab_cfg') {
         //socket.emit('config', true);
         wsSend('$config');
-        $.getJSON(urls['config'], function (data) {
-
-                var tinfo_edf = data["tinfo_edf"] == 1 ? true : false;
-                var tinfo_dsm = data["tinfo_dsm"] == 1 ? true : false;
-                var sens_si7021 = data["sens_si7021"] == 1 ? true : false;
-                var sens_sht10 = data["sens_sht10"] == 1 ? true : false;
-                var sens_mcp3421 = data["sens_mcp3421"] == 1 ? true : false;
-
-                var has_tinfo_edf = data["has_tinfo_edf"] == 1 ? true : false;
-                var has_tinfo_dsm = data["has_tinfo_dsm"] == 1 ? true : false;
-                var has_si7021 = data["has_si7021"] == 1 ? true : false;
-                var has_sht10 = data["has_sht10"] == 1 ? true : false;
-                var has_mcp3421 = data["has_mcp3421"] == 1 ? true : false;
-                var has_oled = data["has_oled"] == 1 ? true : false;
-
-                var cfg_ap = data["cfg_ap"] == 1 ? true : false;
-                var cfg_wifi = data["cfg_wifi"] == 1 ? true : false;
-                var cfg_mqtt = data["cfg_mqtt"] == 1 ? true : false;
-                var cfg_debug = data["cfg_debug"] == 1 ? true : false;
-                var cfg_logger = data["cfg_logger"] == 1 ? true : false;
-                var cfg_tinfo = data["cfg_tinfo"] == 1 ? true : false;
-                var cfg_demo = data["cfg_demo"] == 1 ? true : false;
-                var cfg_rgb = data["cfg_rgb"] == 1 ? true : false;
-                var cfg_oled = data["cfg_oled"] == 1 ? true : false;
-                var cfg_static = data["cfg_static"] == 1 ? true : false;
-
-                //var tinfo_pwr_led = JSON.parse("[" + data["tinfo_pwr_led"] + "]");
-                //var tinfo_nrj_led = JSON.parse("[" + data["tinfo_nrj_led"] + "]");
-                var sens_temp_led = JSON.parse("[" + data["sens_temp_led"] + "]");
-                var sens_hum_led = JSON.parse("[" + data["sens_hum_led"] + "]");
-                var sens_pwr_led = JSON.parse("[" + data["sens_pwr_led"] + "]");
-                var led_panel = data["led_panel"];
-
-
-                var mqtt_ret = data["mqtt_ret"] == 1 ? true : false;
-
-                var cfg_led_bright = data["cfg_led_bright"];
-                var cfg_led_hb = data["cfg_led_hb"];
-
-                var emon_http = data["emon_http"] == 1 ? true : false;
-                var emon_mqtt = data["emon_mqtt"] == 1 ? true : false;
-
-                var jdom_http = data["jdom_http"] == 1 ? true : false;
-                var jdom_mqtt = data["jdom_mqtt"] == 1 ? true : false;
-
-                var domz_http = data["domz_http"] == 1 ? true : false;
-                var domz_mqtt = data["domz_mqtt"] == 1 ? true : false;
-
-                $("#frm_config").autofill(data);
-
-                $("#cfg_mqtt").bootstrapSwitch({
-                    state: cfg_mqtt,
-                    onColor: "success"
-                });
-
-                $("#mqtt_ret").bootstrapSwitch({
-                    state: mqtt_ret,
-                    onColor: "success"
-                });
-
-                $("#emon_http").bootstrapSwitch({
-                    state: emon_http,
-                    onColor: "success"
-                });
-
-                $("#emon_mqtt").bootstrapSwitch({
-                    state: emon_mqtt,
-                    onColor: "success"
-                });
-
-                $("#jdom_http").bootstrapSwitch({
-                    state: jdom_http,
-                    onColor: "success"
-                });
-
-                $("#jdom_mqtt").bootstrapSwitch({
-                    state: jdom_mqtt,
-                    onColor: "success"
-                });
-
-                $("#domz_http").bootstrapSwitch({
-                    state: domz_http,
-                    onColor: "success"
-                });
-
-                $("#domz_mqtt").bootstrapSwitch({
-                    state: domz_mqtt,
-                    onColor: "success"
-                });
-
-                $("#tinfo_edf").bootstrapSwitch({
-                    state: tinfo_edf,
-                    onColor: has_tinfo_edf ? "success" : "warning",
-                    offColor: has_tinfo_edf ? "danger" : "warning"
-                });
-
-                $("#tinfo_dsm").bootstrapSwitch({
-                    state: tinfo_dsm,
-                    onColor: has_tinfo_dsm ? "success" : "warning",
-                    offColor: has_tinfo_dsm ? "danger" : "warning"
-                });
-                /*
-                $("#tinfo_pwr_led").slider({
-                    id: "tinfo_pwr_led",
-                    value: tinfo_pwr_led,
-                    formatter: function (v) {
-                        return sliderFormatter('tinfo', v, 'led', 'W');
-                    }
-                });
-                $("#tinfo_nrj_led").slider({
-                    id: "tinfo_nrj_led",
-                    value: tinfo_nrj_led,
-                    formatter: function (v) {
-                        return sliderFormatter('tinfo', v, 'led', 'A');
-                    }
-                });
-                */
-                $("#sens_temp_led").slider({
-                    id: "slider_temp_led",
-                    value: sens_temp_led,
-                    formatter: function (v) {
-                        return sliderFormatter('sens', v, 'led', '°C');
-                    }
-                });
-                $("#sens_hum_led").slider({
-                    id: "slider_hum_led",
-                    value: sens_hum_led,
-                    formatter: function (v) {
-                        return sliderFormatter('sens', v, 'led', '%');
-                    }
-                });
-                $("#sens_pwr_led").slider({
-                    id: "slider_pwr_led",
-                    value: sens_pwr_led,
-                    formatter: function (v) {
-                        return sliderFormatter('sens', v, 'led', 'W');
-                    }
-                });
-
-                $("#cfg_led_bright").slider({
-                    id: "slider_led_bright",
-                    value: cfg_led_bright,
-                    formatter: function (v) {
-                        return v + '%';
-                    }
-                });
-                $("#cfg_led_hb").slider({
-                    id: "slider_led_hb",
-                    value: cfg_led_hb,
-                    formatter: function (v) {
-                        return (v / 10) + 's';
-                    }
-                });
-
-                $("#sens_si7021").bootstrapSwitch({
-                    state: sens_si7021,
-                    onColor: has_si7021 ? "success" : "warning",
-                    offColor: has_si7021 ? "danger" : "warning"
-                });
-                $("#sens_sht10").bootstrapSwitch({
-                    state: sens_sht10,
-                    onColor: has_sht10 ? "success" : "warning",
-                    offColor: has_sht10 ? "danger" : "warning"
-                });
-                $("#sens_mcp3421").bootstrapSwitch({
-                    state: sens_mcp3421,
-                    onColor: has_mcp3421 ? "success" : "warning",
-                    offColor: has_mcp3421 ? "danger" : "warning"
-                });
-
-                $("#cfg_oled").bootstrapSwitch({
-                    state: cfg_oled,
-                    onColor: has_oled ? "success" : "warning",
-                    offColor: has_oled ? "danger" : "warning"
-                });
-                $("#cfg_ap").bootstrapSwitch('state', cfg_ap);
-                $("#cfg_wifi").bootstrapSwitch('state', cfg_wifi);
-                $("#cfg_debug").bootstrapSwitch('state', cfg_debug);
-                $("#cfg_logger").bootstrapSwitch('state', cfg_logger);
-                $("#cfg_rgb").bootstrapSwitch('state', cfg_rgb);
-                $("#cfg_demo").bootstrapSwitch('state', cfg_demo);
-                $("#cfg_tinfo").bootstrapSwitch('state', cfg_tinfo);
-                $("#cfg_tinfo").bootstrapSwitch('disabled', true);
-                $("#cfg_static").bootstrapSwitch('state', cfg_static);
-            })
+        $.getJSON(urls['config'], fillConfigForm)
             .fail(function (xhr, textStatus, errorThrown) {
                 Notify(2, 'exclamation-triangle', 'warning', 'Error while getting configuration', xhr.status + ' ' + errorThrown);
             })
@@ -762,12 +767,120 @@ $('#btn_delete').click(function () {
             file: $btn.attr("file2delete")
         },
         function (msg, textStatus, xhr) {
-            Notify(2, 'ok', 'success', 'Suppression effectuée', xhr.status + ' ' + msg);
+            Notify(2, 'ok', 'success', 'File deleted', xhr.status + ' ' + msg);
         }).fail(
         function (xhr, textStatus, errorThrown) {
-            Notify(4, 'remove', 'danger', 'Erreur lors de la suppression', xhr.status + ' ' + errorThrown);
+            Notify(4, 'remove', 'danger', 'Unable to delete', xhr.status + ' ' + errorThrown);
         });
     refreshSpiffs();
+});
+
+$('#file_cfg').change(function () {
+    var $txt = $('#txt_load_cfg');
+    var $btn = $('#btn_import');
+    var ok = true;
+    f = this.files[0];
+    var name = f.name.toLowerCase();
+    var size = f.size;
+    var type = f.type;
+    console.log('name=' + name);
+    console.log('size' + size);
+    console.log('type=' + type);
+
+    if (name != "nrjmeter.config") {
+        Notify(5, 'minus-circle', 'danger', 'Bad filename', 'Updated filename should be named nrjmeter.config');
+        ok = false;
+    }
+    if (ok) {
+        $btn.prop('disabled', false);
+        $txt.attr('readonly', '');
+        $txt.val(name);
+        $txt.attr('readonly', 'readonly');
+    } else {
+        $btn.prop('disabled', true);
+        $txt.attr('readonly', '');
+        $txt.val('');
+        $txt.attr('readonly', 'readonly');
+    }
+    return ok;
+});
+
+$('#btn_import').click(function () {
+    if (f) {
+        var r = new FileReader();
+        r.onload = function (e) {
+            var contents = e.target.result;
+            fillConfigForm(JSON.parse(contents));
+            $('#frm_config').trigger('submit');
+            $('#txt_load_cfg').val('');
+            $('#btn_import').prop('disabled', true);
+        }
+        r.readAsText(f);
+    } else {
+        alert("Failed to load file");
+    }
+});
+
+$('#btn_export').click(function () {
+    var exportFilename = 'nrjmeter.config';
+
+    //Force disabled checkboxes to be sent
+    $("#frm_config").find('input[type=checkbox]').each(function () {
+        var checkbox = $(this);
+
+        // add a hidden field with the same name before the checkbox with value = 0
+        if (!checkbox.prop('checked')) {
+            checkbox.clone()
+                .prop('type', 'hidden')
+                .addClass('ghost')
+                .val("0")
+                .insertBefore(checkbox);
+        }
+    });
+
+    var sdata = $("#frm_config").serializeArray();
+
+    //Remove ghost elements added
+    $('.ghost').remove();
+
+    var configFile = '{';
+    for (var i = 0; i < sdata.length; i++) {
+        if (isNaN(sdata[i].value) || sdata[i].value == "" || (!isNaN(sdata[i].value) && sdata[i].value.length > 1 && sdata[i].value[0] == "0")) {
+            if (sdata[i].value == "on") {
+                configFile += "\"" + sdata[i].name + "\"" + ": " + "1";
+            } else {
+                configFile += "\"" + sdata[i].name + "\"" + ": " + "\"" + sdata[i].value + "\"";
+            }
+        } else {
+            configFile += "\"" + sdata[i].name + "\"" + ": " + sdata[i].value;
+        }
+
+        configFile += (i < sdata.length - 1 ? "," : "");
+        configFile += '\r\n';
+    }
+
+    configFile += '}'
+
+    var blob = new Blob([configFile], {
+        type: 'text/csv;charset=utf-8;'
+    });
+    if (navigator.msSaveBlob) { // IE 10+
+        navigator.msSaveBlob(blob, exportFilename);
+    } else {
+        var link = document.createElement("a");
+        if (link.download !== undefined) { // feature detection
+            // Browsers that support HTML5 download attribute
+            var url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", exportFilename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+
+    return false;
 });
 
 $('#btn_rst').click(function () {
@@ -838,6 +951,21 @@ $('#frm_config').validator().on('submit', function (e) {
         var myForm = $("#frm_config").serialize();
         e.preventDefault();
         console.log("Form Submit=" + myForm);
+
+        //Force disabled checkboxes to be sent
+        $(this).find('input[type=checkbox]').each(function () {
+            var checkbox = $(this);
+
+            // add a hidden field with the same name before the checkbox with value = 0
+            if (!checkbox.prop('checked')) {
+                checkbox.clone()
+                    .prop('type', 'hidden')
+                    .addClass('ghost')
+                    .val("off")
+                    .insertBefore(checkbox);
+            }
+        });
+
         $.post(urls['config_form'], $("#frm_config").serialize())
             .done(function (msg, textStatus, xhr) {
                 Notify(2, 'check', 'success', 'Configuration saved', xhr.status + ' ' + msg);
@@ -845,6 +973,9 @@ $('#frm_config').validator().on('submit', function (e) {
             .fail(function (xhr, textStatus, errorThrown) {
                 Notify(4, 'minus-circle', 'danger', 'Error while saving configuration', xhr.status + ' ' + errorThrown);
             });
+
+        //Remove ghost elements added
+        $('.ghost').remove();
     }
 });
 

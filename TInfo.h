@@ -24,6 +24,8 @@
 #include "debug.h"
 #include "config.h"
 #include "NRJMeter.h"
+#include <map>
+#include <string>
 
 #define TINFO_SERIAL  Serial
 
@@ -32,8 +34,12 @@
 
 extern TInfo tinfo;
 extern uint32_t  tinfo_last_seen;  // latest read from this sensor (in s)
+extern std::map<std::string, std::string>  tinfo_values; //Latest TInfo values
+extern std::map<std::string, std::string>  tinfo_flags; //Latest TInfo flags
+extern std::map<std::string, std::string>  tinfo_checksum; //Latest TInfo checksum
 
 // Exported function located in main sketch
 // ===================================================
 void TInfo_setup();
 void handle_tinfo();
+boolean updateTInfo();

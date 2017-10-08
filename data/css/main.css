@@ -6,6 +6,16 @@ html {font-size: 14px;}
 
 .btn-primary {color: #fff;background-color: #337ab7;border-color: #337ab7;}
 
+.card-header.card-mqtt {color: #3d0a52;}
+.card-mqtt {background-color: #c0bddb; border-color: #b0acd4;}
+.card-outline-mqtt {background-color: transparent; border-color: #b0acd4;}
+.btn-mqtt {color: #3d0a52;background-color: #c0bddb;border-color: #b0acd4;}
+
+.card-header.card-tinfo {color: #fff;}
+.card-tinfo {background-color: #fbce76; border-color: #f7c868;}
+.card-outline-tinfo {background-color: transparent; border-color: #f7c868;}
+.btn-tinfo {color: #fff;background-color: #fbce76;border-color: #f7c868;}
+
 .card-header.card-primary {color: #fff;}
 .card-primary {background-color: #337ab7; border-color: #337ab7;}
 .card-outline-primary {background-color: transparent; border-color: #337ab7;}

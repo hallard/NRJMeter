@@ -796,6 +796,7 @@ void setup()
   
   // start Teleinformation
   TInfo_setup();
+  updateTInfo();
 
   //start MQTT
   MQTT_setup();
@@ -922,8 +923,9 @@ void loop()
 
   // Only once task per loop, let system do its own task
   if (task_1_sec) { 
-    //Debugf("[%5ld][0x%04X]...", seconds, config.config);
-    task_1_sec = false; 
+    //Debugf("[%5ld] seconds of lifetime using config [0x%04X]...\r\n", seconds, config.config);
+    task_1_sec = false;
+    mcp3421_last_seen++; 
     si7021_last_seen++;
     sht1x_last_seen++;
     tinfo_last_seen++;
@@ -935,13 +937,14 @@ void loop()
 
         // Client connected ?
         if (ws_client[index].id ){
+          Debugf("Serving WS client #%d with ID %d...\r\n", index, ws_client[index].id );
           uint8_t state = ws_client[index].state;
 
           if (state == CLIENT_SYSTEM)  {
             String response = "{message:\"system\", data:";
             response += sysJSONTable(NULL);
             response += "}";
-            Debugf("%d ws[%u][%u] sending: %s\n", system_get_free_heap_size(), ws_client[index].id, index, response.c_str());    
+            Debugf("%d ws[%u][%u] sending: %s\r\n", system_get_free_heap_size(), ws_client[index].id, index, response.c_str());    
             // send message to this connected client
             ws.text(ws_client[index].id, response.c_str());
           } else if (state == CLIENT_LOGGER) {
@@ -950,7 +953,7 @@ void loop()
             response += "}";
             //Reset Client state, we send log once to avoid infinite loop
             ws_client[index].state = CLIENT_NONE;
-            Debugf("ws[%u][%u] sending %s\n", ws_client[index].id, index, response.c_str()); 
+            Debugf("ws[%u][%u] sending %s\r\n", ws_client[index].id, index, response.c_str()); 
             // send message to this connected client
             ws.text(ws_client[index].id, response.c_str());
           } else if (state == CLIENT_SENSORS || state == CLIENT_TINFO)  {
@@ -973,7 +976,7 @@ void loop()
               }
 
               ws_client[index].tick=0;
-              Debugf("ws[%u][%u] sending %s\n", ws_client[index].id, index, response.c_str());  
+              Debugf("ws[%u][%u] sending %s\r\n", ws_client[index].id, index, response.c_str());  
               // send message to this connected client
               ws.text(ws_client[index].id, response.c_str());
             }

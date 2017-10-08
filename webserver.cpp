@@ -41,15 +41,15 @@ const char* http_password = "admin";
 String htmlEncode(String str)
 {
   String ret = str;
-  
-    ret.replace("{","&#123;");
-    ret.replace("}","&#125;");
-    ret.replace("\"","&quot;");
-    ret.replace("\r","");
-    ret.replace("\n","");
-    ret.replace("\0","");
-    
-    return ret;  
+
+  ret.replace("{", "&#123;");
+  ret.replace("}", "&#125;");
+  ret.replace("\"", "&quot;");
+  ret.replace("\r", "");
+  ret.replace("\n", "");
+  ret.replace("\0", "");
+
+  return ret;
 }
 
 class CaptiveRequestHandler : public AsyncWebHandler {
@@ -145,58 +145,17 @@ void handleFormConfig(AsyncWebServerRequest *request)
     Debugf("===== Posted configuration with %d parameters\r\n", params);
     Debugflush();
 
-
-    //resetConfig();
-    // enable default configuration, zero all
-    memset(&config, 0, sizeof(_Config));
-
-
-    /*
-        // Since Checkbox unchecked are not send (we receive only the one checked as cfg_box=on)
-        // We clear all related options of them, if checked we will be receive it
-        config.config &= ~(CFG_LCD|CFG_DEBUG|CFG_RGB_LED|CFG_AP|CFG_STATIC|CFG_WIFI);
-
-        // same thing for field that can be empty, we do not receive them and want to
-        // be able to clear them
-         config.psk='\0';
-         config.ap_psk='\0';
-         config.ota_auth='\0';
-         config.emoncms.host='\0';
-         config.emoncms.apikey='\0';
-         config.emoncms.url='\0';
-
-         config.jeedom.host='\0';
-         config.jeedom.apikey='\0';
-         config.jeedom.url='\0';
-         config.jeedom.adco='\0';
-
-         config.domz.host='\0';
-         config.domz.url='\0';
-         config.domz.user='\0';
-         config.domz.pass='\0';
-
-        config.sensors.en_si7021 = false;
-        config.sensors.en_sht10 = false;
-        config.sensors.en_mcp3421 = false;
-        config.ip = 0;
-        config.mask = 0;
-        config.gw = 0;
-        config.dns = 0;
-    */
+    //As HTML form is now sent using the ghost tricks (uncheck checkboxes are now sent as 0 value)
+    //No need to clear config
 
     // Navigate for all args, and simulate as it was typed from command line
     for ( i = 0; i < params; i++ ) {
       AsyncWebParameter* param = request->getParam(i);
-      // calc total size + ' ' + '\0'
-      l = 2 +  param->name().length() + param->value().length() ;
-      //Debugf("[%02d][%02d] %s %s\r\n", i, l, param->name().c_str(), param->value().c_str());
-      //Debugflush();
+      Debugf("[%02d] %s %s\r\n", i, param->name().c_str(), param->value().c_str());
+      Debugflush();
 
-      // fit in buffer and not save command
-      if (l < CFG_SERIAL_BUFFER_SIZE && param->name() != "save") {
+      if (param->name() != "save") {
         sprintf_P(buff, PSTR("%s %s"), param->name().c_str(), param->value().c_str());
-        Debugf("[%02d] %s\r\n", i, buff);
-        Debugflush();
         execCmd(buff);
       }
     }
@@ -563,94 +522,44 @@ String tinfoJSONTable(AsyncWebServerRequest * request)
     DebugF("Getting tinfo JSON table...");
   }
 
-  if (config.config & CFG_TINFO)
-  {
+  //Ensure we get last TInfo values
+  updateTInfo();
 
-    /* Sample TINFO
-      [
-      {na: "OPTARIF", va: "BASE", ck: "0", fl: 4}
-      {na: "ISOUSC", va: "30", ck: "9", fl: 4}
-      {na: "BASE", va: "008100469", ck: "'", fl: 4}
-      {na: "PTEC", va: "TH..", ck: "$", fl: 4}
-      {na: "IINST", va: "002", ck: "Y", fl: 4}
-      {na: "IMAX", va: "037", ck: "I", fl: 4}
-      {na: "PAPP", va: "00450", ck: "*", fl: 8}
-      {na: "MOTDETAT", va: "000000", ck: "B", fl: 4}
-      {na: "ADCO", va: "0123456789012", ck: ";", fl: 4}
-      ]
-    */
+  JsonArray& a_tinfo = root.createNestedArray("tinfo");
 
-    ValueList * me = tinfo.getList();
-    std::map<std::string, std::string>  meMap;
+  std::map<std::string, std::string>::iterator iterator;
 
-    if (config.config & CFG_DEMO_MODE)
+  for (iterator = tinfo_values.begin(); iterator != tinfo_values.end(); iterator++) {
+    std::string k = iterator->first;
+    std::string v = iterator->second;
+
+    JsonObject& o_tinfo = a_tinfo.createNestedObject();
+    o_tinfo[FPSTR(FP_NA)] = k.c_str();
+    o_tinfo[FPSTR(FP_VA)] = v.c_str();
+    String checksum = "";
+    if (strcmp(tinfo_checksum[k].c_str(), "\"") == 0 || strcmp(tinfo_checksum[k].c_str(), "\\") == 0 || strcmp(tinfo_checksum[k].c_str(), " / ") == 0)
     {
-      //Random values for testing/demo data purpose only
-      JsonArray& a_tinfo = root.createNestedArray("tinfo");
-      JsonObject& o_tinfo = a_tinfo.createNestedObject();
-      o_tinfo[FPSTR(FP_NA)] = "PAPP";
-      o_tinfo[FPSTR(FP_VA)] = String(random(400, 1000));
-      o_tinfo[FPSTR(FP_CK)] = "*";
-      o_tinfo[FPSTR(FP_FL)] = (random(0, 2) ? "4" : "8");
-      JsonObject& o_tinfo2 = a_tinfo.createNestedObject();
-      o_tinfo2[FPSTR(FP_NA)] = "IINST";
-      o_tinfo2[FPSTR(FP_VA)] = String(random(1, 32));
-      o_tinfo2[FPSTR(FP_CK)] = "Y";
-      o_tinfo2[FPSTR(FP_FL)] = (random(0, 2) ? "4" : "8");
-      JsonObject& o_tinfo3 = a_tinfo.createNestedObject();
-      o_tinfo3[FPSTR(FP_NA)] = "ISOUSC";
-      o_tinfo3[FPSTR(FP_VA)] = "30";
-      o_tinfo3[FPSTR(FP_CK)] = "9";
-      o_tinfo3[FPSTR(FP_FL)] = (random(0, 2) ? "4" : "8");
-
-      JsonArray& a_papp_iinst = root.createNestedArray("papp_iinst");
-      JsonObject& o_papp_iinst = a_papp_iinst.createNestedObject();
-      o_papp_iinst[FPSTR(PAPP)] = o_tinfo[FPSTR(FP_VA)];
-      o_papp_iinst[FPSTR(IINST)] = o_tinfo2[FPSTR(FP_VA)];
-      o_papp_iinst[FPSTR(FP_SEEN)] = 1;
+      checksum = "\\";
+      checksum += tinfo_checksum[k].c_str();
     }
     else
     {
-      // Got at least one ?
-      if (me && me->next) {
-
-        JsonArray& a_tinfo = root.createNestedArray("tinfo");
-
-        // Loop thru the node
-        while (me->next) {
-          // go to next node
-          me = me->next;
-          // Si Item virtuel, on le met pas
-          if (*me->name == '_')
-          {
-            //Nothing
-          }
-          else
-          {
-            meMap[me->name] = me->value;
-
-            JsonObject& o_tinfo = a_tinfo.createNestedObject();
-            o_tinfo[FPSTR(FP_NA)] = me->name;
-            o_tinfo[FPSTR(FP_VA)] = me->value;
-            o_tinfo[FPSTR(FP_CK)] = (me->checksum == '"' || me->checksum == '\\' || me->checksum == ' / ') ? '\\' + me->checksum : me->checksum;
-            o_tinfo[FPSTR(FP_FL)] = me->flags;
-
-          }
-
-        } // While me
-
-        if (meMap[PAPP] != "" && meMap[IINST] != "")
-        {
-          JsonArray& a_papp_iinst = root.createNestedArray("papp_iinst");
-          JsonObject& o_papp_iinst = a_papp_iinst.createNestedObject();
-          o_papp_iinst[FPSTR(PAPP)] = meMap[PAPP].c_str();
-          o_papp_iinst[FPSTR(IINST)] = meMap[IINST].c_str();
-          o_papp_iinst[FPSTR(FP_SEEN)] = (int)((config.config & CFG_TINFO) ? tinfo_last_seen : -1);
-        }
-
-      } // if me
+      checksum = tinfo_checksum[k].c_str();
     }
+    o_tinfo[FPSTR(FP_CK)] = checksum;
+    o_tinfo[FPSTR(FP_FL)] = tinfo_flags[k.c_str()].c_str();
+
   }
+
+  if (tinfo_values["PAPP"] != "" && tinfo_values["IINST"] != "")
+  {
+    JsonArray& a_papp_iinst = root.createNestedArray("papp_iinst");
+    JsonObject& o_papp_iinst = a_papp_iinst.createNestedObject();
+    o_papp_iinst[FPSTR(PAPP)] = tinfo_values["PAPP"].c_str();
+    o_papp_iinst[FPSTR(IINST)] = tinfo_values["IINST"].c_str();
+    o_papp_iinst[FPSTR(FP_SEEN)] = (int)((config.config & CFG_TINFO || config.config & CFG_DEMO_MODE) ? tinfo_last_seen : -1);
+  }
+
   // Web request send response to client
   size_t jsonlen ;
   if (request) {
@@ -692,47 +601,25 @@ String sensorsJSONTable(AsyncWebServerRequest * request)
     DebugF("Getting sensors JSON table...");
   }
 
-  if (config.config & CFG_DEMO_MODE)
-  {
-    JsonArray& a_si7021 = root.createNestedArray("si7021");
-    JsonObject& o_si7021 = a_si7021.createNestedObject();
-    o_si7021[FPSTR(FP_TEMPERATURE)] = random(2700, 3200) / 100.0;
-    o_si7021[FPSTR(FP_HUMIDITY)]    = random(3000, 10000) / 100.0 ;
-    o_si7021[FPSTR(FP_SEEN)]        = 1;
+  // Do a measurment
+  sensors_measure();
 
-    JsonArray& a_sht10 = root.createNestedArray("sht10");
-    JsonObject& o_sht10 = a_sht10.createNestedObject();
-    o_sht10[FPSTR(FP_TEMPERATURE)] = random(2700, 3200) / 100.0;
-    o_sht10[FPSTR(FP_HUMIDITY)]    = random(3000, 10000) / 100.0 ;
-    o_sht10[FPSTR(FP_SEEN)]        = 1;
+  JsonArray& a_si7021 = root.createNestedArray("si7021");
+  JsonObject& o_si7021 = a_si7021.createNestedObject();
+  o_si7021[FPSTR(FP_TEMPERATURE)] = si7021_temperature / 100.0;
+  o_si7021[FPSTR(FP_HUMIDITY)]    = si7021_humidity / 100.0 ;
+  o_si7021[FPSTR(FP_SEEN)]        = (int)((config.config & CFG_SI7021 || config.config & CFG_DEMO_MODE) ? si7021_last_seen : -1);
 
-    JsonArray& a_mcp3421 = root.createNestedArray("mcp3421");
-    JsonObject& o_mcp3421 = a_mcp3421.createNestedObject();
-    o_mcp3421[FPSTR(FP_POWER)] = random(50, 500);
-    o_mcp3421[FPSTR(FP_SEEN)]  = 1;
-  }
-  else
-  {
-    // Do a measurment
-    sensors_measure();
+  JsonArray& a_sht10 = root.createNestedArray("sht10");
+  JsonObject& o_sht10 = a_sht10.createNestedObject();
+  o_sht10[FPSTR(FP_TEMPERATURE)] = sht1x_temperature / 100.0;
+  o_sht10[FPSTR(FP_HUMIDITY)]    = sht1x_humidity / 100.0 ;
+  o_sht10[FPSTR(FP_SEEN)]        = (int)((config.config & CFG_SHT10 || config.config & CFG_DEMO_MODE) ? sht1x_last_seen : -1);
 
-    JsonArray& a_si7021 = root.createNestedArray("si7021");
-    JsonObject& o_si7021 = a_si7021.createNestedObject();
-    o_si7021[FPSTR(FP_TEMPERATURE)] = si7021_temperature / 100.0;
-    o_si7021[FPSTR(FP_HUMIDITY)]    = si7021_humidity / 100.0 ;
-    o_si7021[FPSTR(FP_SEEN)]        = (int)((config.config & CFG_SI7021) ? si7021_last_seen : -1);
-
-    JsonArray& a_sht10 = root.createNestedArray("sht10");
-    JsonObject& o_sht10 = a_sht10.createNestedObject();
-    o_sht10[FPSTR(FP_TEMPERATURE)] = sht1x_temperature / 100.0;
-    o_sht10[FPSTR(FP_HUMIDITY)]    = sht1x_humidity / 100.0 ;
-    o_sht10[FPSTR(FP_SEEN)]        = (int)((config.config & CFG_SHT10) ? sht1x_last_seen : -1);
-
-    JsonArray& a_mcp3421 = root.createNestedArray("mcp3421");
-    JsonObject& o_mcp3421 = a_mcp3421.createNestedObject();
-    o_mcp3421[FPSTR(FP_POWER)] = mcp3421_power;
-    o_mcp3421[FPSTR(FP_SEEN)]  = (int)((config.config & CFG_MCP3421) ? mcp3421_last_seen : -1);
-  }
+  JsonArray& a_mcp3421 = root.createNestedArray("mcp3421");
+  JsonObject& o_mcp3421 = a_mcp3421.createNestedObject();
+  o_mcp3421[FPSTR(FP_POWER)] = mcp3421_power;
+  o_mcp3421[FPSTR(FP_SEEN)]  = (int)((config.config & CFG_MCP3421 || config.config & CFG_DEMO_MODE) ? mcp3421_last_seen : -1);
 
   // Web request send response to client
   size_t jsonlen ;
@@ -841,7 +728,7 @@ void confJSONTable(AsyncWebServerRequest * request)
 
   root[FPSTR(CFG_HTTP_USR)] = config.http_usr;
   root[FPSTR(CFG_HTTP_PWD)] = config.http_pwd;
-  
+
   root[FPSTR(CFG_OTA_AUTH)] = config.ota_auth;
   root[FPSTR(CFG_OTA_PORT)] = (unsigned int) config.ota_port;
 
@@ -996,12 +883,12 @@ void wifiScanJSON(AsyncWebServerRequest * request)
 }
 
 /* ======================================================================
-Function: logJSONTable 
-Purpose : dump all log values in JSON table format for browser
-Input   : -
-Output  : - 
-Comments: -
-====================================================================== */
+  Function: logJSONTable
+  Purpose : dump all log values in JSON table format for browser
+  Input   : -
+  Output  : -
+  Comments: -
+  ====================================================================== */
 String logJSONTable(AsyncWebServerRequest * request)
 {
   String JsonStr = "";
@@ -1011,7 +898,7 @@ String logJSONTable(AsyncWebServerRequest * request)
   // in async response,
   AsyncJsonResponse * response = new AsyncJsonResponse(true);
   JsonArray& arr = response->getRoot();
-  
+
   // Web request ?
   if (request) {
     DebugF("Serving /logger page...");
@@ -1019,45 +906,45 @@ String logJSONTable(AsyncWebServerRequest * request)
     DebugF("Getting logger JSON table...");
   }
 
-    if (config.config & CFG_LOGGER) 
+  if (config.config & CFG_LOGGER)
+  {
+    config.config ^= CFG_LOGGER;
+
+    if (SPIFFS.exists("/log.1.txt"))
     {
-        config.config ^= CFG_LOGGER;
-        
-        if (SPIFFS.exists("/log.1.txt"))
-        { 
-          File f = SPIFFS.open("/log.1.txt", "r");
-          while (f.available()){
-            r++;
-            String line = f.readStringUntil('\n');
-            JsonObject& item = arr.createNestedObject();
-            item[FPSTR(FP_ER)] = r;
-            item[FPSTR(FP_EV)] = htmlEncode(line);
-          }
-          f.close();
-        }
-        
-        if (SPIFFS.exists("/log.txt"))
-        {
-          File f = SPIFFS.open("/log.txt", "r");
-          while (f.available()){
-            r++;
-            String line = f.readStringUntil('\n');
-            JsonObject& item = arr.createNestedObject();
-            item[FPSTR(FP_ER)] = r;
-            item[FPSTR(FP_EV)] = htmlEncode(line);
-          }
-          f.close();
-        }
-        
-        config.config ^= CFG_LOGGER;
-    }
-    else
-    {
+      File f = SPIFFS.open("/log.1.txt", "r");
+      while (f.available()) {
+        r++;
+        String line = f.readStringUntil('\n');
         JsonObject& item = arr.createNestedObject();
         item[FPSTR(FP_ER)] = r;
-        item[FPSTR(FP_EV)] = "Logger not activated";
+        item[FPSTR(FP_EV)] = htmlEncode(line);
+      }
+      f.close();
     }
-    
+
+    if (SPIFFS.exists("/log.txt"))
+    {
+      File f = SPIFFS.open("/log.txt", "r");
+      while (f.available()) {
+        r++;
+        String line = f.readStringUntil('\n');
+        JsonObject& item = arr.createNestedObject();
+        item[FPSTR(FP_ER)] = r;
+        item[FPSTR(FP_EV)] = htmlEncode(line);
+      }
+      f.close();
+    }
+
+    config.config ^= CFG_LOGGER;
+  }
+  else
+  {
+    JsonObject& item = arr.createNestedObject();
+    item[FPSTR(FP_ER)] = r;
+    item[FPSTR(FP_EV)] = "Logger not activated";
+  }
+
   // Web request send response to client
   size_t jsonlen ;
   if (request) {
@@ -1090,7 +977,7 @@ void handleConfigReset(AsyncWebServerRequest * request)
   Debug(F("Serving /config_reset page..."));
   request->send ( 200, "text/plain", FPSTR(FP_RESTART) );
   Debugln(F("Ok!"));
-  
+
   resetConfig();
   resetBoard();
 }
