@@ -308,7 +308,7 @@ function refreshSensors(sensors_data) {
     if (typeof (mcp3421) != 'undefined' && mcp3421.seen >= 0) {
         $("#sp_mcp3421_state").text('');
 
-        if ($("#col_mcp3421").hasClass('in') && !$("#col_si7021").hasClass('in') && !$("#col_sht10").hasClass('in')) {
+        if ($("#col_mcp3421").hasClass('in') && !$("#col_si7021").hasClass('show') && !$("#col_sht10").hasClass('show')) {
             $("#col_mcp3421").removeClass('in').addClass('show');
         }
 
@@ -334,7 +334,7 @@ function refreshSensors(sensors_data) {
     if (typeof (si7021) != 'undefined' && si7021.seen >= 0) {
         $("#sp_si7021_state").text('');
 
-        if (!$("#col_mcp3421").hasClass('in') && $("#col_si7021").hasClass('in') && !$("#col_sht10").hasClass('in')) {
+        if (!$("#col_mcp3421").hasClass('show') && $("#col_si7021").hasClass('in') && !$("#col_sht10").hasClass('show')) {
             $("#col_si7021").removeClass('in').addClass('show');
         }
 
@@ -361,7 +361,7 @@ function refreshSensors(sensors_data) {
     if (typeof (sht10) != 'undefined' && sht10.seen >= 0) {
         $("#sp_sht10_state").text('');
 
-        if (!$("#col_mcp3421").hasClass('in') && !$("#col_si7021").hasClass('in') && $("#col_sht10").hasClass('in')) {
+        if (!$("#col_mcp3421").hasClass('show') && !$("#col_si7021").hasClass('show') && $("#col_sht10").hasClass('in')) {
             $("#col_sht10").removeClass('in').addClass('show');
         }
 
