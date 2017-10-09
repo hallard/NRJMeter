@@ -843,7 +843,7 @@ $('#btn_export').click(function () {
     //Remove ghost elements added
     $('.ghost').remove();
 
-    var configFile = '{';
+    var configFile = '{\r\n';
     for (var i = 0; i < sdata.length; i++) {
         if (isNaN(sdata[i].value) || sdata[i].value == "" || (!isNaN(sdata[i].value) && sdata[i].value.length > 1 && sdata[i].value[0] == "0")) {
             if (sdata[i].value == "on") {
