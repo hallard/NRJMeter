@@ -1487,4 +1487,6 @@ window.onload = function () {
 
     //refreshSensors();
     //refreshPage();
+
+    $('body').addClass('loaded');
 }
