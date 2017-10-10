@@ -87,6 +87,7 @@ boolean jeedomPost(void)
 {
   boolean ret = false;
   char buff[128];
+  struct rst_info * p = ESP.getResetInfoPtr();
   String json = "";
 
   String url ;
@@ -105,6 +106,12 @@ boolean jeedomPost(void)
   url += F("api=") ;
   url += config.jeedom.apikey;
   url += F("&") ;
+
+  sprintf_P(buff, PSTR("uptime=%ld&"), seconds) ;
+  url += buff;
+
+  sprintf_P(buff, PSTR("reset_cause=%d&"), p->reason) ;
+  url += buff;
 
   if (config.config & CFG_TINFO || config.config & CFG_DEMO_MODE)
   {
@@ -129,19 +136,19 @@ boolean jeedomPost(void)
 
   // Does MCP3421 is enabled and seen
   if (config.sensors.en_mcp3421 && config.config & CFG_MCP3421 || config.config & CFG_DEMO_MODE) {
-    sprintf_P(buff, PSTR("MCP3421=%s&"), String(mcp3421_power).c_str());
+    sprintf_P(buff, PSTR("mcp3421=%s&"), String(mcp3421_power).c_str());
     url += buff;
   }
 
   // Does SI7021 is enabled and seen
   if (config.sensors.en_si7021 && config.config & CFG_SI7021 || config.config & CFG_DEMO_MODE) {
-    sprintf_P(buff, PSTR("int_temp=%s&int_hum=%s&"), String(si7021_temperature / 100.0).c_str(), String(si7021_humidity / 100.0).c_str());
+    sprintf_P(buff, PSTR("si7021_temp=%s&si7021_hum=%s&"), String(si7021_temperature / 100.0).c_str(), String(si7021_humidity / 100.0).c_str());
     url += buff;
   }
 
   // Does SHT10 is enabled and seen
   if (config.sensors.en_sht10 && config.config & CFG_SHT10 || config.config & CFG_DEMO_MODE) {
-    sprintf_P(buff, PSTR("ext_temp=%s&ext_hum=%s&ext_hum_nc=%s&"),
+    sprintf_P(buff, PSTR("sht10_temp=%s&sht10_hum=%s&sht10_hum_nc=%s&"),
               String(sht1x_temperature / 100.0).c_str(),
               String(sht1x_humidity / 100.0).c_str(),
               String(sht1x_humidity_nc / 100.0).c_str()
@@ -211,21 +218,21 @@ boolean emoncmsPost(void)
 
   // Does MCP3421 is enabled and seen
   if (config.sensors.en_mcp3421 && config.config & CFG_MCP3421 || config.config & CFG_DEMO_MODE) {
-    sprintf_P(buff, PSTR(",MCP3421:%s"), String(mcp3421_power).c_str());
+    sprintf_P(buff, PSTR(",mcp3421:%s"), String(mcp3421_power).c_str());
     url += buff;
     json += buff;
   }
 
   // Does SI7021 is enabled and seen
   if (config.sensors.en_si7021 && config.config & CFG_SI7021 || config.config & CFG_DEMO_MODE) {
-    sprintf_P(buff, PSTR(",int_temp:%s,int_hum:%s"), String(si7021_temperature / 100.0).c_str(), String(si7021_humidity / 100.0).c_str());
+    sprintf_P(buff, PSTR(",si7021_temp:%s,si7021_hum:%s"), String(si7021_temperature / 100.0).c_str(), String(si7021_humidity / 100.0).c_str());
     url += buff;
     json += buff;
   }
 
   // Does SHT10 is enabled and seen
   if (config.sensors.en_sht10 && config.config & CFG_SHT10 || config.config & CFG_DEMO_MODE) {
-    sprintf_P(buff, PSTR(",ext_temp:%s,ext_hum:%s,ext_hum_nc:%s"),
+    sprintf_P(buff, PSTR(",sht10_temp:%s,sht10_hum:%s,sht10_hum_nc:%s"),
               String(sht1x_temperature / 100.0).c_str(),
               String(sht1x_humidity / 100.0).c_str(),
               String(sht1x_humidity_nc / 100.0).c_str()
@@ -234,7 +241,7 @@ boolean emoncmsPost(void)
     json += buff;
   }
 
-  sprintf_P(buff, PSTR(",reset:%d}"), p->reason) ;
+  sprintf_P(buff, PSTR(",reset_cause:%d}"), p->reason) ;
   url += buff;
   json += buff;
 
@@ -266,9 +273,97 @@ boolean domoticzPost(void)
 
   String baseurl;
   String url;
+  struct rst_info * p = ESP.getResetInfoPtr();
 
   baseurl = *config.domz.url ? config.domz.url : "/";
-  baseurl += F("?type=command&param=udevice&");
+
+  ///Uptime
+  // HTTP: /json.htm?type=command&param=udevice&idx=IDX&nvalue=0&svalue=VALUE
+  // MQTT: '{ "idx" : 1, "svalue" : "25" }'
+  if (config.domz.idx_upt > 0)
+  {
+    if (config.domz.bmode & CFG_BMODE_HTTP)
+    {
+      url = baseurl;
+      url += F("?type=command&param=udevice&");
+      url += "idx=";
+      url += config.domz.idx_upt;
+      url += "&nvalue=0";
+      url += "&svalue=";
+      url += seconds;
+
+      if (!httpPost( config.domz.host, config.domz.port, (char *) url.c_str()))
+      {
+        ret = false;
+      }
+    }
+
+    if (config.domz.bmode & CFG_BMODE_MQTT)
+    {
+      String jsonmqttStr;
+      StaticJsonBuffer<200> jsonBuffer;
+      JsonObject& jsonmqtt = jsonBuffer.createObject();
+      jsonmqtt["idx"] = config.domz.idx_upt;
+      jsonmqtt["nvalue"] = 0;
+      String svalue = "";
+      svalue += seconds;
+      jsonmqtt["svalue"] = svalue.c_str();
+
+      jsonmqtt.printTo(jsonmqttStr);
+
+      if (!mqttPost(config.domz.topic, jsonmqttStr.c_str()))
+      {
+        ret = false;
+      }
+    }
+  }
+
+  //Reset_Cause
+  // HTTP: /json.htm?type=command&param=switchlight&idx=IDX&switchcmd=Set%20Level&level=LEVEL
+  // MQTT: '{ "idx" : 1, switchcmd : "Set Level", "Level" : "6" }'
+  //Rst cause No.  Cause                          GPIO state
+  //0              Power reboot                   Changed
+  //1              Hardware WDT reset             Changed
+  //2              Fatal exception                Unchanged
+  //3              Software watchdog reset        Unchanged
+  //4              Software reset                 Unchanged
+  //5              Deep-sleep                     Changed
+  //6              Hardware reset                 Changed
+  if (config.domz.idx_rst > 0)
+  {
+    if (config.domz.bmode & CFG_BMODE_HTTP)
+    {
+      url = baseurl;
+      url += F("?type=command&param=switchlight&");
+      url += "idx=";
+      url += config.domz.idx_rst;
+      url += "&switchcmd=Set%20Level&level=";
+      url += p->reason*10;
+
+      if (!httpPost( config.domz.host, config.domz.port, (char *) url.c_str()))
+      {
+        ret = false;
+      }
+    }
+
+    if (config.domz.bmode & CFG_BMODE_MQTT)
+    {
+      String jsonmqttStr;
+      StaticJsonBuffer<200> jsonBuffer;
+      JsonObject& jsonmqtt = jsonBuffer.createObject();
+      jsonmqtt["command"] = "switchlight";
+      jsonmqtt["idx"] = config.domz.idx_rst;
+      jsonmqtt["switchcmd"] = "Set Level";
+      jsonmqtt["level"] = p->reason * 10;
+
+      jsonmqtt.printTo(jsonmqttStr);
+
+      if (!mqttPost(config.domz.topic, jsonmqttStr.c_str()))
+      {
+        ret = false;
+      }
+    }
+  }
 
   if (config.config & CFG_TINFO || config.config & CFG_DEMO_MODE)
   {
@@ -282,6 +377,7 @@ boolean domoticzPost(void)
       if (config.domz.bmode & CFG_BMODE_HTTP)
       {
         url = baseurl;
+        url += F("?type=command&param=udevice&");
         url += "idx=";
         url += config.domz.idx_txt;
         url += "&nvalue=0";
@@ -321,6 +417,7 @@ boolean domoticzPost(void)
       if (config.domz.bmode & CFG_BMODE_HTTP)
       {
         url = baseurl;
+        url += F("?type=command&param=udevice&");
         url += "idx=";
         url += config.domz.idx_p1sm;
         url += "&nvalue=0";
@@ -366,6 +463,7 @@ boolean domoticzPost(void)
       if (config.domz.bmode & CFG_BMODE_HTTP)
       {
         url = baseurl;
+        url += F("?type=command&param=udevice&");
         url += "idx=";
         url += config.domz.idx_crt;
         url += "&nvalue=0";
@@ -405,6 +503,7 @@ boolean domoticzPost(void)
       if (config.domz.bmode & CFG_BMODE_HTTP)
       {
         url = baseurl;
+        url += F("?type=command&param=udevice&");
         url += "idx=";
         url += config.domz.idx_elec;
         url += "&nvalue=0";
@@ -444,6 +543,7 @@ boolean domoticzPost(void)
       if (config.domz.bmode & CFG_BMODE_HTTP)
       {
         url = baseurl;
+        url += F("?type=command&param=udevice&");
         url += "idx=";
         url += config.domz.idx_kwh;
         url += "&nvalue=0";
@@ -486,6 +586,7 @@ boolean domoticzPost(void)
       if (config.domz.bmode & CFG_BMODE_HTTP)
       {
         url = baseurl;
+        url += F("?type=command&param=udevice&");
         url += "idx=";
         url += config.domz.idx_pct;
         url += "&nvalue=0";
@@ -529,6 +630,7 @@ boolean domoticzPost(void)
     if (config.domz.bmode & CFG_BMODE_HTTP)
     {
       url = baseurl;
+      url += F("?type=command&param=udevice&");
       url += "idx=";
       url += config.domz.idx_mcp3421;
       url += "&nvalue=0";
@@ -572,6 +674,7 @@ boolean domoticzPost(void)
     if (config.domz.bmode & CFG_BMODE_HTTP)
     {
       url = baseurl;
+      url += F("?type=command&param=udevice&");
       url += "idx=";
       url += config.domz.idx_si7021;
       url += "&nvalue=0";
@@ -618,6 +721,7 @@ boolean domoticzPost(void)
     if (config.domz.bmode & CFG_BMODE_HTTP)
     {
       url = baseurl;
+      url += F("?type=command&param=udevice&");
       url += "idx=";
       url += config.domz.idx_sht10;
       url += "&nvalue=0";

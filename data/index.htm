@@ -395,11 +395,6 @@
 
                             </div>
                             <!-- panel body-->
-                            <div class="card-footer">
-                                <div class="text-center">
-                                    <!-- Nothing yet -->
-                                </div>
-                            </div>
                         </div>
                     </div>
                     <!-- Panel Config -->
@@ -1122,6 +1117,15 @@
                                         </div>
                                         <div class="col-sm-3">
                                             <input class="checkbox-inline" id="domz_mqtt" name="domz_mqtt" type="checkbox" data-label-text="MQTT">
+                                        </div>
+                                    </div>
+                                    <div class="form-group form-inline">
+                                        <strong class="col-sm-3 control-label">ESP Metrics</strong>
+                                        <div class="col-sm-9">
+                                            <input type="number" class="form-control" style="width: 100%" id="domz_idx_upt" name="domz_idx_upt" maxlength="3" placeholder="Uptime">
+                                            <span class="help-block text-muted">Domoticz IDX for "General - Custom Sensor (Uptime)</span>
+                                            <input type="number" class="form-control" style="width: 100%" id="domz_idx_rst" name="domz_idx_rst" maxlength="3" placeholder="Reset Cause ID">
+                                            <span class="help-block text-muted">Domoticz IDX for "Light Switch - Switch" device update (Reset Cause ID)</span>
                                         </div>
                                     </div>
                                     <div class="form-group form-inline">

@@ -111,6 +111,8 @@ extern const char CFG_DOMZ_URL[]   ;
 extern const char CFG_DOMZ_TOPIC[] ;
 extern const char CFG_DOMZ_USER[]  ;
 extern const char CFG_DOMZ_PASS[]  ;
+extern const char CFG_DOMZ_IDX_UPT[] ;
+extern const char CFG_DOMZ_IDX_RST[] ;
 extern const char CFG_DOMZ_IDX_MCP3421[] ;
 extern const char CFG_DOMZ_IDX_SI7021[] ;
 extern const char CFG_DOMZ_IDX_SHT10[] ;

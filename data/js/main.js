@@ -449,7 +449,7 @@ function scanWifi() {
         })
         .fail(function () {
             $table.bootstrapTable('hideLoading');
-            console.log("error while requesting Wifi networks");
+            console.log("Error while requesting Wifi networks");
         })
 }
 
@@ -483,7 +483,7 @@ function refreshSpiffs() {
 
         })
         .fail(function () {
-            console.log("error while requestiong SPIFFS data");
+            console.log("Error while requestiong SPIFFS data");
         })
 
     $.getJSON(urls['version'], function (spiffs_version) {

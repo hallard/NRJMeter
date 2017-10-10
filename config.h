@@ -205,6 +205,8 @@ typedef struct
   char  url[CFG_DOMZ_URL_SIZE+1];       // Post URL
   char  topic[CFG_MQTT_TOPIC_SIZE+1];   // MQTT In Topic (33 Bytes)
   uint32_t freq;                        // refresh rate
+  uint16_t idx_upt;                     // Index device domoticz Uptime (2 Byte)
+  uint16_t idx_rst;                     // Index device domoticz Reset Cause (2 Byte)
   uint16_t idx_mcp3421;                 // Index device domoticz Electric (2 Byte)
   uint16_t idx_si7021;                  // Index device domoticz Temp + Humidity (2 Byte)
   uint16_t idx_sht10;                   // Index device domoticz Temp + Humidity (2 Byte)
@@ -216,7 +218,7 @@ typedef struct
   uint16_t idx_pct;                     // Index device domoticz Percentage (2 Byte)
   uint16_t port;                        // Protocol port (HTTP/HTTPS)
   uint8_t bmode;                        // Bit field register (1 Byte) - Broadcast mode (HTTP, MQTT)
-  uint8_t filler[66];                   // in case adding data in config avoiding loosing current conf by bad crc*/
+  uint8_t filler[62];                   // in case adding data in config avoiding loosing current conf by bad crc*/
 } _domoticz;
 
 

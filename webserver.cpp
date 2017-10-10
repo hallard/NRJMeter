@@ -149,6 +149,7 @@ void handleFormConfig(AsyncWebServerRequest *request)
     //No need to clear config
 
     // Navigate for all args, and simulate as it was typed from command line
+    
     for ( i = 0; i < params; i++ ) {
       AsyncWebParameter* param = request->getParam(i);
       Debugf("[%02d] %s %s\r\n", i, param->name().c_str(), param->value().c_str());
@@ -161,6 +162,7 @@ void handleFormConfig(AsyncWebServerRequest *request)
     }
 
     // now we can save the config
+    
     if ( saveConfig() ) {
       ret = 200;
       response = PSTR("OK");
@@ -173,11 +175,13 @@ void handleFormConfig(AsyncWebServerRequest *request)
     ret = 400;
     response = PSTR("Missing Form Field");
   }
-
+  //Commented because it seems to cause wdt reset web uncommented.?
+  //To be debug later...
+/*
   DebugF("Sending ");
   Debug(ret);
   Debug(":");
-  Debugln(response);
+  Debugln(response);*/
   request->send ( ret, "text/plain", response);
 }
 
@@ -696,6 +700,8 @@ void confJSONTable(AsyncWebServerRequest * request)
   root[FPSTR(CFG_DOMZ_TOPIC)]  = config.domz.topic;
   root[FPSTR(CFG_DOMZ_USER)] = config.domz.user;
   root[FPSTR(CFG_DOMZ_PASS)] = config.domz.pass;
+  root[FPSTR(CFG_DOMZ_IDX_UPT)] = (unsigned int) config.domz.idx_upt;
+  root[FPSTR(CFG_DOMZ_IDX_RST)] = (unsigned int) config.domz.idx_rst;
   root[FPSTR(CFG_DOMZ_IDX_MCP3421)] = (unsigned int) config.domz.idx_mcp3421;
   root[FPSTR(CFG_DOMZ_IDX_SI7021)] = (unsigned int) config.domz.idx_si7021;
   root[FPSTR(CFG_DOMZ_IDX_SHT10)] = (unsigned int) config.domz.idx_sht10;
