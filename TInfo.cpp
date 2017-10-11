@@ -293,10 +293,11 @@ void TInfo_setup()
       //This section cause WDT reset, it seems to be related to second time calling Serial.begin(..)
       //Found old issue related but seems to be fixed
       //https://github.com/esp8266/Arduino/issues/2305
+      TINFO_SERIAL.end();
       DebugF("Setting up Serial ... ");
-      //TINFO_SERIAL.begin(1200, SERIAL_7E1);
+      TINFO_SERIAL.begin(1200, SERIAL_7E1);
       DebugF("Swap Serial ... ");
-      //TINFO_SERIAL.swap();
+      TINFO_SERIAL.swap();
 #endif
 
       // Init teleinfo
@@ -318,6 +319,7 @@ void TInfo_setup()
 
 void handle_tinfo()
 {
+  #ifdef DEBUG_SERIAL1
   char c;
   // Handle teleinfo serial
   if ( TINFO_SERIAL.available() ) {
@@ -325,8 +327,9 @@ void handle_tinfo()
     c = TINFO_SERIAL.read();
     //DEBUG_SERIAL.print(c);
     tinfo.process(c);
-
+    
     tinfo_last_seen = 0;
   }
+  #endif
 }
 

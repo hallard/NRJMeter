@@ -209,6 +209,7 @@ $.notify.addStyle('notifyhtml', {
 });
 
 function Notify(mydelay, myicon, mytype, mytitle, mymsg) {
+    $('body').addClass('loaded');
     $.notify({
         html: "<div class='card card-" + mytype + "'><strong><span class='fa fa-" + myicon + "'/>&nbsp;" + mytitle + "</strong><p>" + mymsg + "</p></div>"
     }, {
@@ -948,6 +949,7 @@ $(document)
 $('#frm_config').validator().on('submit', function (e) {
     // everything looks good!
     if (!e.isDefaultPrevented()) {
+        $('body').removeClass('loaded');
         var myForm = $("#frm_config").serialize();
         e.preventDefault();
         console.log("Form Submit=" + myForm);
