@@ -981,12 +981,11 @@ void sensors_measure(void)
       DebuglnF("SHT10 Disabled in config");
     } else {
       // Check sensor here (will respond ACK)
-      if ( sht1x_testDevice())
-      {
+      if ( sht1x_testDevice()) {
         DebugF("SHT10 OK");
+        
         // Read values from the sensor
-        if (sht1x_readAll())
-        {
+        if (sht1x_readAll()) {
           config.config |= CFG_SHT10;
           sht1x_last_seen = 0;
 
@@ -1015,8 +1014,8 @@ void sensors_measure(void)
       DebuglnF("SI7021 Disabled in config");
     } else {
       // Re init I2C Bus if needed
-      if ((config.config & CFG_SI7021) == 0)
-      {
+      if ((config.config & CFG_SI7021) == 0) {
+        DebuglnF("SI7021 not found, retry detection");
         i2c_init(true);
         si7021_init();
         delay(20);
@@ -1024,24 +1023,29 @@ void sensors_measure(void)
         i2c_init(false);
       }
 
-      // Read values
-      if (si7021_readValues(SI7021_RESOLUTION_14T_12RH) == 0) {
-        config.config |= CFG_SI7021;
-        si7021_last_seen = 0;
-        // Print the values to the serial port
-        DebugF("SI7021 Temperature: ");
-        Debug( si7021_temperature / 100.0);
-        DebugF("C  Humidity: ");
-        Debug( si7021_humidity / 100.0);
-        Debugln("%");
-      } else {
-        config.config &= ~CFG_SI7021;
-        DebuglnF("Error reading SI7021");
+      // Be sure all is fine (even redetection)
+      if (config.config & CFG_SI7021 ) {
+        // Read values
+        if (si7021_readValues(SI7021_RESOLUTION_14T_12RH) == 0) {
+          config.config |= CFG_SI7021;
+          si7021_last_seen = 0;
+          // Print the values to the serial port
+          DebugF("SI7021 Temperature: ");
+          Debug( si7021_temperature / 100.0);
+          DebugF("C  Humidity: ");
+          Debug( si7021_humidity / 100.0);
+          Debugln("%");
+        } else {
+          config.config &= ~CFG_SI7021;
+          DebuglnF("Error reading SI7021");
+        }
       }
     } // SI7021 enabled
 
     // Does 0V 10V Output detected  ?
-    if ( config.config & CFG_MCP4725 )  {
+    if (config.config & CFG_MCP4725 == 0 ) {
+      DebuglnF("MCP4725 not found");
+    } else { 
       float pwr_scale;
       float power = config.led_panel;
 
@@ -1073,6 +1077,7 @@ void sensors_measure(void)
     } else {
       // Re init I2C Bus if needed
       if ((config.config & CFG_MCP3421) == 0) {
+        DebuglnF("MCP3421 not found, retry detection");
         i2c_init(false);
         mcp3421_init();
         delay(70);
