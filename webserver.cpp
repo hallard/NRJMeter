@@ -477,7 +477,7 @@ String sysJSONTable(AsyncWebServerRequest * request)
 
   { JsonObject& item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "SPIFFS Used";
-    item[FPSTR(FP_VA)] = formatSize(info.totalBytes);
+    item[FPSTR(FP_VA)] = formatSize(info.usedBytes);
   }
 
   { JsonObject& item = arr.createNestedObject();
