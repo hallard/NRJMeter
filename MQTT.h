@@ -20,6 +20,10 @@
 //
 // **********************************************************************************
 
+#ifndef MQTT_h
+#define MQTT_h
+
+
 #include "NRJMeter.h"
 #include "Debug.h"
 #include <PubSubClient.h>
@@ -41,3 +45,5 @@ extern String inTopic;
 void MQTT_setup();
 void handle_MQTT();
 bool mqttPost(const char * topic, const char* message);
+
+#endif
