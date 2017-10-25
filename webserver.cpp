@@ -149,15 +149,17 @@ void handleFormConfig(AsyncWebServerRequest *request)
     //No need to clear config
 
     // Navigate for all args, and simulate as it was typed from command line
-    
     for ( i = 0; i < params; i++ ) {
       AsyncWebParameter* param = request->getParam(i);
-      Debugf("[%02d] %s %s\r\n", i, param->name().c_str(), param->value().c_str());
-      Debugflush();
+      // We are in async, try to work fast
+      // less print, less time 
+      //Debugf("[%02d] %s %s\r\n", i, param->name().c_str(), param->value().c_str());
+      //Debugflush();
 
       if (param->name() != "save") {
         sprintf_P(buff, PSTR("%s %s"), param->name().c_str(), param->value().c_str());
         execCmd(buff);
+        wdt_reset();
       }
     }
 
@@ -177,11 +179,7 @@ void handleFormConfig(AsyncWebServerRequest *request)
   }
   //Commented because it seems to cause wdt reset web uncommented.?
   //To be debug later...
-/*
-  DebugF("Sending ");
-  Debug(ret);
-  Debug(":");
-  Debugln(response);*/
+  Debugf("Sending %d : %s\r\n", ret, response.c_str());
   request->send ( ret, "text/plain", response);
 }
 
