@@ -829,7 +829,7 @@ void setup()
   // Let time out setup AP
   wifi_end_setup = false;
 
-  dummy();
+  //dummy();
 }
 
 
@@ -842,21 +842,31 @@ Comments: on NodeMCU BUILTIN_LED is GPIO16 and switch (Flash) on GPIO 0
 ====================================================================== */
 uint8_t handle_key_led( uint8_t level)
 {
+  #ifdef ARDUINO_ESP8266_WEMOS_D1MINI
+    // Serial1 is GPIO2 so BUILTIN_LED on D1 MINI
+    #ifndef DEBUG_SERIAL1
+      digitalWrite(BUILTIN_LED, 1);
+      pinMode(BUILTIN_LED, OUTPUT);
+      digitalWrite(BUILTIN_LED, !level);
+    #endif
+  return false;
+  #else
   uint8_t btn=true;
   digitalWrite(BUILTIN_LED, 1);
   pinMode(BUILTIN_LED, OUTPUT);
   digitalWrite(BUILTIN_LED, !level);
 
   //animations.Pause();
-  //noInterrupts(); // Need 100% focus on instruction timing
+  noInterrupts(); // Need 100% focus on instruction timing
   // Flash is on GPIO0, so RGB LED
-  //pinMode(0, INPUT);
-  //btn = digitalRead(0);
-  //btn = true;
-  //pinMode(0, OUTPUT); // set back to output
-  //interrupts();
+  pinMode(0, INPUT);
+  btn = digitalRead(0);
+  btn = true;
+  pinMode(0, OUTPUT); // set back to output
+  interrupts();
   //animations.Resume();
   return !btn;
+  #endif
 }
 
 
