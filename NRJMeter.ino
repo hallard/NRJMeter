@@ -596,16 +596,27 @@ int WifiHandleConn(boolean setup = false)
     ArduinoOTA.onStart([]() { 
       // Clean SPIFFS
       SPIFFS.end();
+
+      // Disable client connections    
+      ws.enable(false);
+      ws.closeAll();
+
+      MQTT_close();
+
       LedRGBOFF();
       DebuglnF("OTA Update Started");
       ota_blink = true;
+      #if !defined(ARDUINO_ESP8266_WEMOS_D1MINI) && !defined(DEBUG_SERIAL1)
       digitalWrite(LED_BUILTIN, 1);
       pinMode(LED_BUILTIN, OUTPUT);
+      #endif
     });
 
     ArduinoOTA.onEnd([]() { 
+      #if !defined(ARDUINO_ESP8266_WEMOS_D1MINI) && !defined(DEBUG_SERIAL1)
       pinMode(LED_BUILTIN, INPUT);
       digitalWrite(LED_BUILTIN, HIGH);
+      #endif
       DebuglnF("OTA Update finished restarting");
       LedRGBON(COLOR_GREEN);
       rgb_led.Show();  
@@ -617,7 +628,11 @@ int WifiHandleConn(boolean setup = false)
       sprintf_P(buff, "%03d %%\r", percent); 
       Debug(buff); 
 
+      task_1_sec = false;
+
+      #if !defined(ARDUINO_ESP8266_WEMOS_D1MINI) && !defined(DEBUG_SERIAL1)
       digitalWrite(LED_BUILTIN, percent%2==0);
+      #endif
 
       // hue from 0.0 to 1.0 (rainbow) with 33% (of 0.5f) luminosity
       rgb_led.SetPixelColor(0, HslColor( (float) percent * 0.01f , 1.0f, 0.3f ));
