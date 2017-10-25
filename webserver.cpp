@@ -722,6 +722,7 @@ void confJSONTable(AsyncWebServerRequest * request)
   root[FPSTR(CFG_COUNT2_DELAY)] = (unsigned int) config.counter.delay2;
   root[FPSTR(CFG_COUNT2_VALUE)] = (unsigned long) config.counter.value2;
 
+  #ifdef USE_MQTT
   root[FPSTR(CFG_MQTT_HOST)] = config.mqtt.host;
   root[FPSTR(CFG_MQTT_PORT)] = (unsigned int) config.mqtt.port;
   root[FPSTR(CFG_MQTT_USR)] = config.mqtt.usr;
@@ -731,6 +732,7 @@ void confJSONTable(AsyncWebServerRequest * request)
   root[FPSTR(CFG_MQTT_QOS)] = MQTT_QOS_STRING;
   root[FPSTR(CFG_MQTT_RET)] = MQTT_RET_STRING;
   root[FPSTR(CFG_MQTT_VER)] = MQTT_VER_STRING;
+  #endif
 
   root[FPSTR(CFG_HTTP_USR)] = config.http_usr;
   root[FPSTR(CFG_HTTP_PWD)] = config.http_pwd;

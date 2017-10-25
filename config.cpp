@@ -373,6 +373,7 @@ void showConfig(uint16_t section, uint32_t clientid )
     outputBuffer(buff, clientid);
   }
 
+  #ifdef USE_MQTT
   if (section & CFG_HLP_MQTT) {
     strcpy_P(buff, PSTR("\r\n===== MQTT\r\n"));
     OUT("Broker     : %s\n", config.mqtt.host);
@@ -388,6 +389,7 @@ void showConfig(uint16_t section, uint32_t clientid )
     // Send to correct client output
     outputBuffer(buff, clientid);
   }
+  #endif
 
   if (section & CFG_HLP_DATA) {
     strcpy_P(buff, PSTR("\r\n===== Data Server\n"));

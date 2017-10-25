@@ -68,6 +68,9 @@ extern "C" {
 #define NRJMETER_VERSION_MAJOR 2
 #define NRJMETER_VERSION_MINOR 0
 
+// Don't use MQTT
+#define USE_MQTT
+
 // Maximum time when we fire a reset with no refresh (in sec)
 #define WDT_RESET_TIME 30
 
