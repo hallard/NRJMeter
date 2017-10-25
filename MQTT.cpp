@@ -22,6 +22,8 @@
 
 #include "MQTT.h"
 #include "NRJMeter.h"
+
+#ifdef USE_MQTT
 #include "Debug.h"
 #include <PubSubClient.h> // https://github.com/knolleary/pubsubclient
 
@@ -43,8 +45,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 }
 
 void mqttReconnect() {
+  int retries = 3;
+
   // Loop until we're reconnected
-  while (!mqttclient.connected()) {
+  while (!mqttclient.connected() && --retries) {
     DebuglnF("Attempting MQTT connection...");
 
     //client.connect(config.host, "testuser", "testpass")
@@ -58,12 +62,13 @@ void mqttReconnect() {
     } else {
       DebugF("failed, rc=");
       Debug(mqttclient.state());
-      DebuglnF(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
+      DebuglnF(" try again later");
+      // Wait 2 seconds before retrying
+      delay(2000);
     }
   }
 }
+
 
 bool mqttPost(const char * topic, const char* message)
 {
@@ -86,25 +91,37 @@ bool mqttPost(const char * topic, const char* message)
 
 void handle_MQTT()
 {
-  if (!mqttclient.connected() && WiFi.status() == WL_CONNECTED) {
-    mqttReconnect();
-  }
+  if ( WiFi.status() == WL_CONNECTED) {
 
-  mqttclient.loop();
+    if ( (config.config & CFG_MQTT) && !mqttclient.connected() ) {
+      mqttReconnect();
+    }
 
+    if (mqttclient.connected() ) {
+      mqttclient.loop();
+    }
   //mqttclient.publish(outTopic.c_str(), "ESPMQTTTestMessage!!");
-
+  }
 }
 
 void MQTT_setup()
 {
-  inTopic = config.host;
-  inTopic += F("/in");
+  if (config.config & CFG_MQTT) {
 
-  outTopic = config.host;
-  outTopic += F("/out");
+    inTopic = config.host;
+    inTopic += F("/in");
 
-  mqttclient.setServer(config.mqtt.host, config.mqtt.port);
-  mqttclient.setCallback(mqttCallback);
+    outTopic = config.host;
+    outTopic += F("/out");
+
+    mqttclient.setServer(config.mqtt.host, config.mqtt.port);
+    mqttclient.setCallback(mqttCallback);
+  }
 }
+#else // USE_MQTT
 
+bool mqttPost(const char * topic, const char* message) {}
+void handle_MQTT() {}
+void MQTT_setup() {}
+
+#endif
