@@ -43,6 +43,7 @@ extern String inTopic;
 // Exported function located in main sketch
 // ===================================================
 void MQTT_setup();
+void MQTT_close();
 void handle_MQTT();
 bool mqttPost(const char * topic, const char* message);
 

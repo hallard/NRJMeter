@@ -118,10 +118,21 @@ void MQTT_setup()
     mqttclient.setCallback(mqttCallback);
   }
 }
+
+void MQTT_close()
+{
+  if (config.config & CFG_MQTT) {
+    mqttclient.unsubscribe(inTopic.c_str());
+    mqttclient.disconnect();
+  }
+}
+
+
 #else // USE_MQTT
 
 bool mqttPost(const char * topic, const char* message) {}
 void handle_MQTT() {}
 void MQTT_setup() {}
+void MQTT_close() {}
 
 #endif
