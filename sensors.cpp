@@ -942,6 +942,7 @@ void sensors_setDAC(uint16_t out_power)
 
 void sensors_setup(void)
 {
+
   i2c_init();
 
   // Does SI7021 is enabled
@@ -954,9 +955,32 @@ void sensors_setup(void)
     mcp3421_init() ;
   }
 
-  // Issue à 1st Measurement
-  sensors_measure();
+  // Init some reasonable values on demo
+  if (config.config & CFG_DEMO_MODE) {
+    sht1x_temperature = random(1000, 3000);
+    sht1x_humidity = random(4000, 6000);
+    si7021_temperature = random(1500, 3500);
+    si7021_humidity = random(5000, 7000);
+    mcp3421_power = random(100, 1000);
+  } else {
+    // Issue à 1st Measurement
+    sensors_measure();
+  }
 }
+
+int sensor_simulate_change(int value, int change, int min, int max) {
+  if (change>0 ) {
+    change *=100; min *=100; max *=100;
+    value += random(-change,change);
+    if (value > max) {
+      value = max;
+    } else if (value < min) {
+      value = min;
+    }
+  }
+  return value;
+}
+
 
 void sensors_measure(void)
 {
@@ -964,13 +988,16 @@ void sensors_measure(void)
   {
       //Demo mode, generating random values
       sht1x_last_seen = 0;
-      sht1x_temperature = random(2500, 3000);
-      sht1x_humidity = random(2500, 3000);;
       si7021_last_seen = 0;
-      si7021_temperature = random(2500, 3000);;
-      si7021_humidity = random(2500, 3000);;
       mcp3421_last_seen = 0;
-      mcp3421_power = random(100, 250);;
+
+      sht1x_temperature = sensor_simulate_change(sht1x_temperature, 10, -10, 60);// +/- 10°, min-10° max:60°
+      sht1x_humidity = sensor_simulate_change(sht1x_humidity, 10, 15, 95);// +/- 10%, min 15% max:95%
+
+      si7021_temperature = sensor_simulate_change(si7021_temperature, 10, -10, 60);// +/- 10°, min-10° max:60°
+      si7021_humidity = sensor_simulate_change(si7021_humidity, 10, 15, 95);// +/- 10%, min 15% max:95%
+
+      mcp3421_power =  sensor_simulate_change(mcp3421_power*100, 50, 100, 3000) / 100 ;// +/- 50W, min 50W max2500W
   }
   else
   {
