@@ -13,6 +13,14 @@ enum NeoPixelType
 
 #define Is_RGBW(l) ( l==NeoPixelType_Rgbw || l==NeoPixelType_Grbw )
 
+#if defined (ESP32)
+#define NEO_ESP_METHOD NeoEsp32I2s1800KbpsMethod
+#elif defined (ESP8266)
+#define NEO_ESP_METHOD NeoEsp8266BitBang800KbpsMethod
+#else
+#error "Incorrect target Type, should be ESP8266 or ESP32"
+#endif
+
 class NeoPixelWrapper
 {
 public:
@@ -40,23 +48,26 @@ public:
     switch (_type) {
 
       case NeoPixelType_Rgb:
-        _pRgb = new NeoPixelBus<NeoRgbFeature,NeoEsp8266BitBang800KbpsMethod>(countPixels, pin);
+        _pRgb = new NeoPixelBus<NeoRgbFeature,NEO_ESP_METHOD>(countPixels, pin);
         _pRgb->Begin();
       break;
 
       case NeoPixelType_Grb:
-        _pGrb = new NeoPixelBus<NeoGrbFeature,NeoEsp8266BitBang800KbpsMethod>(countPixels, pin);
+        _pGrb = new NeoPixelBus<NeoGrbFeature,NEO_ESP_METHOD>(countPixels, pin);
         _pGrb->Begin();
       break;
 
       case NeoPixelType_Rgbw:
-        _pRgbw = new NeoPixelBus<NeoRgbwFeature,NeoEsp8266BitBang800KbpsMethod>(countPixels, pin);
+        _pRgbw = new NeoPixelBus<NeoRgbwFeature,NEO_ESP_METHOD>(countPixels, pin);
         _pRgbw->Begin();
       break;
 
       case NeoPixelType_Grbw:
-        _pGrbw = new NeoPixelBus<NeoGrbwFeature,NeoEsp8266BitBang800KbpsMethod>(countPixels, pin);
+        _pGrbw = new NeoPixelBus<NeoGrbwFeature,NEO_ESP_METHOD>(countPixels, pin);
         _pGrbw->Begin();
+      break;
+
+      default:
       break;
     }
   }
@@ -68,21 +79,26 @@ public:
       case NeoPixelType_Grb:  _pGrb->Show();   break;
       case NeoPixelType_Rgbw: _pRgbw->Show();  break;
       case NeoPixelType_Grbw: _pGrbw->Show();  break;
+      default:      break;
     }
   }
   bool CanShow() const
   {
+    bool cs ;
     switch (_type) {
-      case NeoPixelType_Rgb:  _pRgb->CanShow();  break;
-      case NeoPixelType_Grb:  _pGrb->CanShow();  break;
-      case NeoPixelType_Rgbw: _pRgbw->CanShow(); break;
-      case NeoPixelType_Grbw: _pGrbw->CanShow(); break;
+      case NeoPixelType_Rgb: cs = _pRgb->CanShow();  break;
+      case NeoPixelType_Grb: cs = _pGrb->CanShow();  break;
+      case NeoPixelType_Rgbw: cs = _pRgbw->CanShow(); break;
+      case NeoPixelType_Grbw: cs = _pGrbw->CanShow(); break;
+      default: cs = false;     break;
     }
+    return cs;
   }
 
   // replicate all the calls like the above
     bool IsDirty() const
     {
+      return false;
     }
 
     void Dirty()
@@ -95,18 +111,22 @@ public:
 
     uint8_t* Pixels() const
     {
+      return nullptr;
     }
 
     size_t PixelsSize() const
     {
+      return 0;
     }
 
     size_t PixelSize() const
     {
+      return 0;
     }
 
     uint16_t PixelCount() const
     {
+      return 0;
     }
 
     void SetPixelColor(uint16_t indexPixel, RgbColor color)
@@ -116,6 +136,7 @@ public:
         case NeoPixelType_Grb: _pGrb->SetPixelColor(indexPixel, color);   break;
         case NeoPixelType_Rgbw:_pRgbw->SetPixelColor(indexPixel, color);  break;
         case NeoPixelType_Grbw:_pGrbw->SetPixelColor(indexPixel, color);  break;
+        default:  break;
       }
     }
 
@@ -126,6 +147,7 @@ public:
         case NeoPixelType_Grb: _pGrb->SetPixelColor(indexPixel, color);   break;
         case NeoPixelType_Rgbw:_pRgbw->SetPixelColor(indexPixel, color);  break;
         case NeoPixelType_Grbw:_pGrbw->SetPixelColor(indexPixel, color);  break;
+        default:  break;
       }
     }
 
@@ -136,6 +158,7 @@ public:
         case NeoPixelType_Grb:  _pGrbw->SetPixelColor(indexPixel, color);   break;
         case NeoPixelType_Rgbw: _pRgbw->SetPixelColor(indexPixel, color);   break;
         case NeoPixelType_Grbw: _pGrbw->SetPixelColor(indexPixel, color);   break;
+        default:  break;
       }
     }
 
@@ -146,6 +169,7 @@ public:
         case NeoPixelType_Grb:  return _pGrb->GetPixelColor(indexPixel);     break;
         case NeoPixelType_Rgbw: /*doesn't support it so we don't return it*/ break;
         case NeoPixelType_Grbw: /*doesn't support it so we don't return it*/ break;
+        default:  break;
       }
       return 0;
     }
@@ -159,6 +183,7 @@ public:
         case NeoPixelType_Grb:  return _pGrb->GetPixelColor(indexPixel);  break;
         case NeoPixelType_Rgbw: return _pRgbw->GetPixelColor(indexPixel); break;
         case NeoPixelType_Grbw: return _pGrbw->GetPixelColor(indexPixel); break;
+        default:  break;
       }
       return 0;
     }
@@ -212,13 +237,12 @@ public:
     }
 
 private:
-  NeoPixelType _type;
-
   // have a member for every possible type
-  NeoPixelBus<NeoRgbFeature,NeoEsp8266BitBang800KbpsMethod>*  _pRgb;
-  NeoPixelBus<NeoGrbFeature,NeoEsp8266BitBang800KbpsMethod>*  _pGrb;
-  NeoPixelBus<NeoRgbwFeature,NeoEsp8266BitBang800KbpsMethod>* _pRgbw;
-  NeoPixelBus<NeoGrbwFeature,NeoEsp8266BitBang800KbpsMethod>* _pGrbw;
+  NeoPixelBus<NeoRgbFeature,NEO_ESP_METHOD>*  _pRgb;
+  NeoPixelBus<NeoGrbFeature,NEO_ESP_METHOD>*  _pGrb;
+  NeoPixelBus<NeoRgbwFeature,NEO_ESP_METHOD>* _pRgbw;
+  NeoPixelBus<NeoGrbwFeature,NEO_ESP_METHOD>* _pGrbw;
+  NeoPixelType _type;
 
   void cleanup()
   {
@@ -227,6 +251,7 @@ private:
       case NeoPixelType_Grb:  delete _pGrb ; _pGrb  = NULL; break;
       case NeoPixelType_Rgbw: delete _pRgbw; _pRgbw = NULL; break;
       case NeoPixelType_Grbw: delete _pGrbw; _pGrbw = NULL; break;
+      default:  break;
     }
   }
 };

@@ -24,28 +24,43 @@
 
 // Include Arduino header
 #include <Arduino.h>
-#include <ESP8266WiFi.h>
+//#include <ESP8266WiFi.h>
 #include <DNSServer.h>
+
+#ifdef ESP8266
 #include <ESP8266HTTPClient.h>
 #include <ESPAsyncTCP.h>
+#elif defined ESP32
+#include <HTTPClient.h>
+#include <AsyncTCP.h>
+#include <ESPmDNS.h>
+#endif
+
+#include <ArduinoOTA.h>
+#include <LittleFS.h>
+#define SPIFFS LittleFS
+
 #include <ESPAsyncWebServer.h>
 #include <SPIFFSEditor.h>
-#include <AsyncJson.h>
 #include <ArduinoJson.h>
-#include <Hash.h>
-#include <ESP8266mDNS.h>
+#include <AsyncJson.h>
+//#include <Hash.h>
 #include <WifiUdp.h>
 #include <EEPROM.h>
 #include <Wire.h>
 //#include <NeoPixelBus.h>
 #include <LibTeleinfo.h>
-#include <FS.h>
+//#include <SPIFFS.h>
 //#include <GDBStub.h>
+#include <AsyncMqttClient.h>
 
+#ifdef ESP8266
 extern "C" {
 #include "user_interface.h"
 }
+#endif
 
+#include "PString.h"
 #include "debug.h"
 #include "flash_str.h"
 #include "webserver.h"
@@ -54,6 +69,9 @@ extern "C" {
 #include "sensors.h"
 #include "NeoPixelWrapper.h"
 #include "EmonLib.h"
+#include "TInfo.h"
+#include "MQTT.h"
+
 
 
 // OTA Prexif Name 
@@ -69,7 +87,7 @@ extern "C" {
 #define NRJMETER_VERSION_MINOR 0
 
 // Don't use MQTT
-#define USE_MQTT
+//#define USE_MQTT
 
 // Maximum time when we fire a reset with no refresh (in sec)
 #define WDT_RESET_TIME 30
@@ -148,6 +166,38 @@ void LedRGBON(uint16_t hue );
 #define Debugf(...)   
 #endif
 */
+
+#if defined (ESP8266)
+
+	#define ESP_getResetReason() 		ESP.getResetReason()
+	#define ESP_reset() 				 		ESP.reset()
+	#define ESP_getChipId() 		 		ESP.getChipId()
+	#define ESP_getFlashChipSize() 	ESP.getFlashChipRealSize()
+	#define WiFi_SetHostname(h)     WiFi.hostname(h)
+	#define WiFi_GetHostname()      WiFi.hostname()
+  #define WDT_RESET()							wdt_reset()
+  #define ESP_Free_Heap_Size() 		system_get_free_heap_size()
+  #define ESP_Get_SDK_Version()		system_get_sdk_version()
+  #define WiFi_GetMode()					wifi_get_opmode()
+
+#elif defined (ESP32)
+
+	#include <rom/rtc.h>
+  #include <esp_task_wdt.h>
+	#define ESP_getResetReason() 		rtc_get_reset_reason(0)
+	#define ESP_reset() 		     		ESP.restart()
+	#define ESP_getChipId()      		ESP.getEfuseMac()
+	#define ESP_getFlashChipSize()	ESP.getFlashChipSize()
+	#define WiFi_SetHostname(h)     WiFi.setHostname(h)
+	#define WiFi_GetHostname()      WiFi.getHostname()
+  #define WDT_RESET()							esp_task_wdt_reset()
+  #define ESP_Free_Heap_Size() 		esp_get_free_heap_size()
+  #define ESP_Get_SDK_Version()		esp_get_idf_version()
+  #define WiFi_GetMode()					WiFi.getMode()
+
+#endif
+
+
 
 // Exported variables/object instancied in main sketch
 // ===================================================

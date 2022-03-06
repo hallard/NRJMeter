@@ -171,8 +171,6 @@ void EnergyMonitor::calcVI(unsigned int crossings, unsigned int timeout)
 //--------------------------------------------------------------------------------------
 void EnergyMonitor::calcV(unsigned int crossings, unsigned int timeout)
 {
-  int SupplyVoltage=3300;
-
   unsigned int crossCount = 0;                             //Used to measure number of times threshold is crossed.
   unsigned int numberOfSamples = 0;                        //This is now incremented
 

@@ -12,9 +12,10 @@
 // This program works with the Wifinfo board
 // see schematic here https://github.com/hallard/teleinfo/tree/master/Wifinfo
 //
-// Written by Sylvain REMY
+// Written by Sylvain REMY / Charles-Henri Hallard
 //
 // History : V1.00 2017-09-05 - First release
+//           V2.00 2019-06-02 - Use AsyncMQTT library
 //
 // All text above must be included in any redistribution.
 //
@@ -23,22 +24,17 @@
 #ifndef MQTT_h
 #define MQTT_h
 
-
 #include "NRJMeter.h"
-#include "Debug.h"
-#include <PubSubClient.h>
 
-#define MQTT_MAX_PACKET_SIZE 128
-#define MQTT_KEEPALIVE 15
-#define MQTT_VERSION MQTT_VERSION_3_1_1
-#define MQTT_VER_STRING "3.1.1" //Library version format conversion to human readable
-#define MQTT_QOS_STRING "0 - Almost Once" //Only mode supported by the library
-#define MQTT_RET_STRING "0" //Only mode supporte by the library
+#define MQTT_MAX_TOPIC_LEN 1024
+#define MQTT_QOS 		0  		
+#define MQTT_RETAIN false 
 
 // Exported variables/object instancied in main sketch
 // ===================================================
 extern String outTopic;
 extern String inTopic;
+extern AsyncMqttClient mqttClient;
 
 // Exported function located in main sketch
 // ===================================================

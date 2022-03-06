@@ -8,9 +8,10 @@ void dummy(void) {
   char data ;
   int len = strlen_P(dummy_string);
   //for (int k = 0; k < len; k++) {
+  Debug(len);
   for (int k = 0; k < 10; k++) {
     data = pgm_read_byte(dummy_string + k);
-    //DEBUG_SERIAL.print(data);
+    Debug(data);
   } 	
 }
 

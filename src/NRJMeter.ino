@@ -21,27 +21,7 @@
 //
 // **********************************************************************************
 // Include Arduino header
-#include <Arduino.h>
-#include <ESP8266WiFi.h>
-#include <DNSServer.h>
-#include <ESP8266HTTPClient.h>
-#include <ESP8266mDNS.h>
-#include <ESPAsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include <ArduinoJson.h>
-#include <AsyncJson.h>
-#include <Hash.h>
-#include <WiFiUdp.h>
-#include <ArduinoOTA.h>
-#include <EEPROM.h>
-#include <Wire.h>
-#include <NeoPixelBus.h>
-#include <NeoPixelAnimator.h>
-//#include <LibTeleinfo.h>
-#include <FS.h>
 #include <Ticker.h>
-
-//#include <GDBStub.h>
 
 // Global project file
 #include "NRJMeter.h"
@@ -53,15 +33,7 @@
 Ticker wdt_ticker;
 static unsigned long wdt_loop;
 
-//WiFiManager wifi(0);
-//ESP8266WebServer server(80);
-//WebSocketsServer webSocket = WebSocketsServer(8081);
-
-// DNS server
-//DNSServer dnsServer;
-
 bool ota_blink;
-//uint8_t heartbeat;
 uint8_t wifi_state;
 unsigned long wifi_connect_time;
 bool    wifi_end_setup;
@@ -120,6 +92,13 @@ unsigned long seconds = 0;
 
 DNSServer * pdnsServer = NULL;
 
+#ifdef ESP8266
+WiFiEventHandler stationConnectedHandler;
+WiFiEventHandler stationDisconnectedHandler;
+WiFiEventHandler probeRequestPrintHandler;
+WiFiEventHandler stationModeGotIPHandler;
+#endif
+
 /* ======================================================================
 Function: wdt_check
 Purpose : call back to check everything is fine, else reset CPU
@@ -129,9 +108,10 @@ Comments: -
 ====================================================================== */
 void ICACHE_RAM_ATTR wdt_check(void) {
   unsigned long t = millis();
-  unsigned long last_run = abs(t - wdt_loop);
+  //unsigned long last_run = abs(t - wdt_loop);
+  unsigned long last_run = t - wdt_loop;
 
-  os_printf("[osWatch] last_run:%d FreeRam:%d rssi:%d WIFI:%d\n", last_run, ESP.getFreeHeap(), WiFi.RSSI(), WiFi.status());
+  //os_printf("[osWatch] last_run:%d FreeRam:%d rssi:%d WIFI:%d\n", last_run, ESP.getFreeHeap(), WiFi.RSSI(), WiFi.status());
 
   if( last_run >= (WDT_RESET_TIME * 1000) ) {
     // save the hit here to eeprom or to rtc memory if needed
@@ -140,7 +120,7 @@ void ICACHE_RAM_ATTR wdt_check(void) {
     //pinMode(2, INPUT);
     //pinMode(15, INPUT);
     //ESP.reset();  // hard reset
-    os_printf("[osWatch] WARNING loop Blocked! check for deadlock!\n");
+    //os_printf("[osWatch] WARNING loop Blocked! check for deadlock!\n");
   }
 }
 
@@ -382,6 +362,12 @@ void LedRGBSetup( void)
 #endif
 
 
+String macToString(const unsigned char* mac) {
+  char buf[20];
+  snprintf(buf, sizeof(buf), "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  return String(buf);
+}
+
 /* ======================================================================
 Function: WiFiEvent
 Purpose : callback for Wifi events connection / reconnection 
@@ -389,24 +375,66 @@ Input   : event
 Output  : -
 Comments: -
 ====================================================================== */
+#ifdef ESP8266
 
-void WifiEvent(WiFiEvent_t event) {
-
-  DebugF("**** WiFi_event ");
-  switch(event) {
-
-    case WIFI_EVENT_STAMODE_CONNECTED:       DebuglnF("sta conected")     ; break;
-    case WIFI_EVENT_STAMODE_DISCONNECTED:    DebuglnF("sta disconnected") ; break;
-    case WIFI_EVENT_STAMODE_AUTHMODE_CHANGE: DebuglnF("sta auth change")  ; break;
-    case WIFI_EVENT_STAMODE_GOT_IP:          DebuglnF("sta got ip")       ; break;
-    case WIFI_EVENT_STAMODE_DHCP_TIMEOUT:    DebuglnF("sta dhcp tout")    ; break;
-
-    case WIFI_EVENT_SOFTAPMODE_STACONNECTED: DebuglnF("ap connected")    ; break;
-    case WIFI_EVENT_SOFTAPMODE_STADISCONNECTED: DebuglnF("ap disconnected") ; break;
-    case WIFI_EVENT_SOFTAPMODE_PROBEREQRECVED: DebuglnF("ap req received")  ; break;
-  }
+void onStationConnected(const WiFiEventSoftAPModeStationConnected& evt) {
+  DebugF("Station connected: ");
+  Debugln(macToString(evt.mac));
 }
 
+void onStationDisconnected(const WiFiEventSoftAPModeStationDisconnected& evt) {
+  DebugF("Station disconnected: ");
+  Debugln(macToString(evt.mac));
+}
+
+void onStationModeGotIP(const WiFiEventStationModeGotIP& evt) {
+  DebugF("Station Connected: ");
+  Debugln(WiFi.localIP());
+}
+
+void onProbeRequestPrint(const WiFiEventSoftAPModeProbeRequestReceived& evt) {
+  DebugF("Probe request from: ");
+  Debug(macToString(evt.mac));
+  DebugF("  RSSI : ");
+  Debugln(evt.rssi);
+}
+
+#endif
+
+#ifdef ESP32
+void WiFiEvent(WiFiEvent_t event)
+{
+  DebugF("**** WiFi_event ");
+  switch (event) {
+      case SYSTEM_EVENT_WIFI_READY:         DebuglnF("WiFi interface ready"); break;
+      case SYSTEM_EVENT_SCAN_DONE:          DebuglnF("Completed scan for access points"); break;
+      case SYSTEM_EVENT_STA_START:          DebuglnF("WiFi client started"); break;
+      case SYSTEM_EVENT_STA_STOP:           DebuglnF("WiFi clients stopped"); break;
+      case SYSTEM_EVENT_STA_CONNECTED:      DebuglnF("Connected to access point"); break;
+      case SYSTEM_EVENT_STA_DISCONNECTED:   DebuglnF("Disconnected from WiFi access point"); break;
+      case SYSTEM_EVENT_STA_AUTHMODE_CHANGE:DebuglnF("Authentication mode of access point has changed");  break;
+      case SYSTEM_EVENT_STA_GOT_IP:         DebugF("Obtained IP address: "); Debugln(WiFi.localIP()); break;
+      case SYSTEM_EVENT_STA_LOST_IP:        DebuglnF("Lost IP address and IP address is reset to 0"); break;
+      case SYSTEM_EVENT_STA_WPS_ER_SUCCESS: DebuglnF("WiFi Protected Setup (WPS): succeeded in enrollee mode"); break;
+      case SYSTEM_EVENT_STA_WPS_ER_FAILED:  DebuglnF("WiFi Protected Setup (WPS): failed in enrollee mode"); break;
+      case SYSTEM_EVENT_STA_WPS_ER_TIMEOUT: DebuglnF("WiFi Protected Setup (WPS): timeout in enrollee mode"); break;
+      case SYSTEM_EVENT_STA_WPS_ER_PIN:     DebuglnF("WiFi Protected Setup (WPS): pin code in enrollee mode"); break;
+      case SYSTEM_EVENT_AP_START:           DebuglnF("WiFi access point started"); break;
+      case SYSTEM_EVENT_AP_STOP:            DebuglnF("WiFi access point  stopped"); break;
+      case SYSTEM_EVENT_AP_STACONNECTED:    DebuglnF("Client connected"); break;
+      case SYSTEM_EVENT_AP_STADISCONNECTED: DebuglnF("Client disconnected"); break;
+      case SYSTEM_EVENT_AP_STAIPASSIGNED:   DebuglnF("Assigned IP address to client"); break;
+      case SYSTEM_EVENT_AP_PROBEREQRECVED:  DebuglnF("Received probe request"); break;
+      case SYSTEM_EVENT_GOT_IP6:            DebuglnF("IPv6 is preferred"); break;
+      case SYSTEM_EVENT_ETH_START:          DebuglnF("Ethernet started"); break;
+      case SYSTEM_EVENT_ETH_STOP:           DebuglnF("Ethernet stopped"); break;
+      case SYSTEM_EVENT_ETH_CONNECTED:      DebuglnF("Ethernet connected"); break;
+      case SYSTEM_EVENT_ETH_DISCONNECTED:   DebuglnF("Ethernet disconnected"); break;
+      case SYSTEM_EVENT_ETH_GOT_IP:         DebuglnF("Obtained IP address"); break;
+      default:  DebuglnF("other")     ; break;
+  }
+}
+#endif
 
 /* ======================================================================
 Function: WifiConnect
@@ -420,7 +448,7 @@ int WifiConnect(boolean with_timeout)
   int ret = WiFi.status();
 
   // Set hostname
-  WiFi.hostname(config.host);
+  WiFi_SetHostname(config.host);
 
   // If not already connected
   if (ret != WL_CONNECTED) {
@@ -507,7 +535,16 @@ int WifiHandleConn(boolean setup = false)
 
   if (setup) {
 
-    //WiFi.onEvent(WifiEvent);
+    #ifdef ESP8266
+    stationConnectedHandler = WiFi.onSoftAPModeStationConnected(&onStationConnected);
+    stationDisconnectedHandler = WiFi.onSoftAPModeStationDisconnected(&onStationDisconnected);
+    probeRequestPrintHandler = WiFi.onSoftAPModeProbeRequestReceived(&onProbeRequestPrint);
+    stationModeGotIPHandler = WiFi.onStationModeGotIP(&onStationModeGotIP);
+    
+    #else
+    WiFi.onEvent(WiFiEvent);
+    #endif
+
     WiFi.mode(WIFI_AP_STA);
 
     //DebuglnF("========== SDK Saved parameters Start"); 
@@ -595,7 +632,7 @@ int WifiHandleConn(boolean setup = false)
     // OTA callbacks
     ArduinoOTA.onStart([]() { 
       // Clean SPIFFS
-      SPIFFS.end();
+      LittleFS.end();
 
       // Disable client connections    
       ws.enable(false);
@@ -640,7 +677,9 @@ int WifiHandleConn(boolean setup = false)
     });
 
     ArduinoOTA.onError([](ota_error_t error) {
+      #ifdef LED_BUILTIN
       pinMode(LED_BUILTIN, INPUT);
+      #endif
       for (unsigned int pixel=0; pixel<config.led_num ; pixel++) 
         rgb_led.SetPixelColor(pixel, HslColor(COLOR_RED, 1.0f, 0.25f));
       rgb_led.Show();  
@@ -713,9 +752,6 @@ Comments: -
 ====================================================================== */
 void setup()
 {
-  char buff[32];
-  boolean reset_config = true;
-
   #if (F_CPU == 160000000L )
     // Set CPU speed to 160MHz
     system_update_cpu_freq(160);
@@ -741,8 +777,14 @@ void setup()
   #else
     config.config = 0;
   #endif
+  Debugf("NRJMeter V%d.%d Reset=", NRJMETER_VERSION_MAJOR, NRJMETER_VERSION_MINOR);
   Debugln(F("\r\n\r\n=============="));
-  Debugf("NRJMeter V%d.%d Reset=%s\r\n", NRJMETER_VERSION_MAJOR, NRJMETER_VERSION_MINOR, ESP.getResetReason().c_str());
+  #ifdef ESP8266
+  Debugf("%s\r\n", ESP.getResetReason().c_str());
+  #endif
+  #ifdef ESP32
+  Debugf("CPU0:%d CPU1:%d\r\n", rtc_get_reset_reason(0), rtc_get_reset_reason(1));
+  #endif
   Debugflush();
 
   // Our configuration is stored into EEPROM
@@ -766,11 +808,12 @@ void setup()
   Debugflush();
 
   // Check File system init 
-  if (!SPIFFS.begin()) {
+  if (!LittleFS.begin()) {
     // Serious problem
-    DebuglnF("SPIFFS Mount failed");
+    DebuglnF("LittleFS Mount failed");
   } else {
-    DebuglnF("SPIFFS Mount succesfull");
+    DebuglnF("LittleFS Mount succesfull");
+    #ifdef ESP8266
     Dir dir = SPIFFS.openDir("/");
     while (dir.next()) {    
       String fileName = dir.fileName();
@@ -778,7 +821,20 @@ void setup()
       Debugf("FS File: %s, size: %d\n", fileName.c_str(), fileSize);
     }
     DebuglnF("");
+    #endif
+    #ifdef ESP32
+    //File root = fs.open("/");
+    File root = LittleFS.open("/");
+    if (root && root.isDirectory()) {
+      File file = root.openNextFile();
+      while(file){
+        Debugf("FS File: %s, size: %d\n", file.name(), file.isDirectory() ? 0 : file.size());
+        file = root.openNextFile();
+      }
+    }
+    #endif
   }
+
 
   // Read Configuration from EEP
   if (readConfig(true)) {
@@ -800,6 +856,14 @@ void setup()
   #ifdef RGB_LED_PIN
     LedRGBSetup();
   #endif
+
+  // Force specific config
+  //strcpy_P(config.ssid, PSTR("CH2I-HOTSPOT"));
+  //strcpy_P(config.psk, PSTR("Wireless@Ch2i"));
+  //saveConfig();
+  //config.config |= CFG_TINFO;
+  //config.config |= CFG_DEMO_MODE;
+  //config.tinfo.type |= CFG_TI_EDF;
 
   // start Wifi connect or soft AP
   WifiHandleConn(true);
@@ -853,23 +917,27 @@ Function: handle_key_led
 Purpose : Manage on board Led and Push button of NodeMCU
 Input   : true to light on the led, false to light off
 Output  : true if button is pressed
-Comments: on NodeMCU BUILTIN_LED is GPIO16 and switch (Flash) on GPIO 0
+Comments: on NodeMCU LED_BUILTIN is GPIO16 and switch (Flash) on GPIO 0
 ====================================================================== */
 uint8_t handle_key_led( uint8_t level)
 {
   #ifdef ARDUINO_ESP8266_WEMOS_D1MINI
-    // Serial1 is GPIO2 so BUILTIN_LED on D1 MINI
-    #ifndef DEBUG_SERIAL1
-      digitalWrite(BUILTIN_LED, 1);
-      pinMode(BUILTIN_LED, OUTPUT);
-      digitalWrite(BUILTIN_LED, !level);
+    // Serial1 is GPIO2 so LED_BUILTIN on D1 MINI
+    #ifndef FREE_GPIO2
+      digitalWrite(LED_BUILTIN, 1);
+      pinMode(LED_BUILTIN, OUTPUT);
+      digitalWrite(LED_BUILTIN, !level);
     #endif
   return false;
   #else
   uint8_t btn=true;
-  digitalWrite(BUILTIN_LED, 1);
-  pinMode(BUILTIN_LED, OUTPUT);
-  digitalWrite(BUILTIN_LED, !level);
+  #ifdef LED_BUILTIN
+    #ifndef FREE_GPIO2
+      digitalWrite(LED_BUILTIN, 1);
+      pinMode(LED_BUILTIN, OUTPUT);
+      digitalWrite(LED_BUILTIN, !level);
+    #endif
+  #endif
 
   //animations.Pause();
   noInterrupts(); // Need 100% focus on instruction timing
@@ -969,7 +1037,7 @@ void loop()
             String response = "{message:\"system\", data:";
             response += sysJSONTable(NULL);
             response += "}";
-            Debugf("%d ws[%u][%u] sending: %s\r\n", system_get_free_heap_size(), ws_client[index].id, index, response.c_str());    
+            Debugf("%d ws[%u][%u] sending: %s\r\n", ESP_Free_Heap_Size(), ws_client[index].id, index, response.c_str());    
             // send message to this connected client
             ws.text(ws_client[index].id, response.c_str());
           } else if (state == CLIENT_LOGGER) {
@@ -1081,7 +1149,9 @@ void loop()
           WiFi.disconnect(); 
           //wifi_set_opmode(NULL_MODE);
           WiFi.mode(WIFI_OFF);
+          #ifdef ESP8266
           WiFi.forceSleepBegin();
+          #endif
           delay(1); //Needed, at least in my tests WiFi doesn't power off without this for some reason
           yield();
         } else {
@@ -1091,7 +1161,7 @@ void loop()
         // Config has Wifi but we're not connected
         if ( WiFi.status() != WL_CONNECTED ) {
           // No AP if config and not connected, enable back auto connect
-          if ( config.config&CFG_AP==0) {
+          if ( (config.config&CFG_AP)==0) {
             DebuglnF("Enabling back Wifi Autoconnect with no AP");
             WiFi.mode(WIFI_STA);
             WifiConnect(false);

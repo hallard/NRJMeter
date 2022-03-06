@@ -20,12 +20,15 @@
 //
 // **********************************************************************************
 
-#ifndef WEBSERVER_H
-#define WEBSERVER_H
+// Avoid WEBSERVER_H because used in AsyncWebServer.h
+#ifndef MYWEBSERVER_H
+#define MYWEBSERVER_H
 
 // Include main project include file
 #include "NRJMeter.h"
 #include "SPIFFSEditor.h"
+#include <SPIFFSEditor.h>
+
 
 // Web Socket client state
 typedef struct {

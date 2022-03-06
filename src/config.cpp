@@ -55,7 +55,8 @@ void outputBuffer(char * buff, uint32_t clientid)
     ws.text(clientid, buff, strlen(buff));
   else
     // Send to Serial
-    DEBUG_SERIAL.print(buff);
+
+    Debug(buff);
 }
 
 /* ======================================================================
@@ -67,7 +68,7 @@ void outputBuffer(char * buff, uint32_t clientid)
   ====================================================================== */
 void eepromDump(uint8_t bytesPerRow, uint32_t clientid)
 {
-  uint16_t i, b;
+  uint16_t i;
   uint16_t j = 0 ;
   char buff[256];
 
@@ -203,19 +204,17 @@ void resetConfig(uint32_t clientid)
   // enable default configuration, zero all
   memset(&config, 0, sizeof(_Config));
 
-  // Set default Hostname
-  sprintf_P(config.host, PSTR("NRJMeter-%c%06X"), OTA_PREFIX_ID, ESP.getChipId());
+  // Set default Hostname and  AP SSID
+  sprintf_P(config.host, PSTR("NRJMeter-%c%06X"), OTA_PREFIX_ID, ESP_getChipId() );
+  sprintf_P(config.ap_ssid, PSTR("ch2i-NRJMeter-%c%06X"), OTA_PREFIX_ID, ESP_getChipId() );
 
   //Set OTA default port
   config.ota_port = DEFAULT_OTA_PORT ;
 
   //Set Wifi Max Wait for Connect
   config.wmw = CFG_DEFAULT_WMW;
-  // AP SSID
-  sprintf_P(config.ap_ssid, PSTR("ch2i-NRJMeter-%c%06X"), OTA_PREFIX_ID, ESP.getChipId());
 
   // Add other init default config here
-
   //  strcpy_P(config.ssid, PSTR("YOUR-AP"));
   //  strcpy_P(config.psk, PSTR("Your-PSK"));
 
@@ -292,7 +291,7 @@ void resetBoard(uint32_t clientid) {
   pinMode(0, INPUT);
   pinMode(2, INPUT);
   pinMode(15, INPUT);
-  ESP.reset();
+  ESP_reset();
 
   // Should never arrive there
   while (true);
@@ -307,7 +306,7 @@ void resetBoard(uint32_t clientid) {
   ====================================================================== */
 void showConfig(uint16_t section, uint32_t clientid )
 {
-  char buff[256] = "";
+  char buff[512] = "";
 #define OUT(x,y) { sprintf_P(buff+strlen(buff),PSTR(x),y); }
 
   if (section & CFG_HLP_SYS) {
@@ -382,9 +381,8 @@ void showConfig(uint16_t section, uint32_t clientid )
     OUT("Password   : %s\n", config.mqtt.pwd);
     OUT("In Topic   : %s\n", inTopic.c_str());
     OUT("Out Topic  : %s\n", outTopic.c_str());
-    OUT("QoS        : %s\n", MQTT_QOS_STRING);
-    OUT("Retain     : %s\n", MQTT_RET_STRING);
-    OUT("Protocol   : %s\n", MQTT_VER_STRING);
+    OUT("QoS        : %d\n", MQTT_QOS);
+    OUT("Retain     : %d\n", MQTT_RETAIN);
 
     // Send to correct client output
     outputBuffer(buff, clientid);
@@ -527,16 +525,16 @@ void showHelp(uint16_t section, uint32_t clientid)
     if (section & CFG_HLP_COUNTER)  ws.text(clientid, FPSTR(HELP_COUNTER));
     if (section & CFG_HLP_SENSOR)   ws.text(clientid, FPSTR(HELP_SENSOR));
   } else {
-    DEBUG_SERIAL.print(FPSTR(HELP_HELP));
-    if (section & CFG_HLP_SYS)      DEBUG_SERIAL.print(FPSTR(HELP_SYS));
-    if (section & CFG_HLP_WIFI)     DEBUG_SERIAL.print(FPSTR(HELP_WIFI));
-    if (section & CFG_HLP_MQTT)     DEBUG_SERIAL.print(FPSTR(HELP_MQTT));
-    if (section & CFG_HLP_DATA)     DEBUG_SERIAL.print(FPSTR(HELP_DATA));
-    if (section & CFG_HLP_TINFO)    DEBUG_SERIAL.print(FPSTR(HELP_TINFO));
-    if (section & CFG_HLP_JEEDOM)   DEBUG_SERIAL.print(FPSTR(HELP_JEEDOM));
-    if (section & CFG_HLP_DOMZ)     DEBUG_SERIAL.print(FPSTR(HELP_DOMZ));
-    if (section & CFG_HLP_COUNTER)  DEBUG_SERIAL.print(FPSTR(HELP_COUNTER));
-    if (section & CFG_HLP_SENSOR)   DEBUG_SERIAL.print(FPSTR(HELP_SENSOR));
+    Debug(FPSTR(HELP_HELP));
+    if (section & CFG_HLP_SYS)      Debug(FPSTR(HELP_SYS));
+    if (section & CFG_HLP_WIFI)     Debug(FPSTR(HELP_WIFI));
+    if (section & CFG_HLP_MQTT)     Debug(FPSTR(HELP_MQTT));
+    if (section & CFG_HLP_DATA)     Debug(FPSTR(HELP_DATA));
+    if (section & CFG_HLP_TINFO)    Debug(FPSTR(HELP_TINFO));
+    if (section & CFG_HLP_JEEDOM)   Debug(FPSTR(HELP_JEEDOM));
+    if (section & CFG_HLP_DOMZ)     Debug(FPSTR(HELP_DOMZ));
+    if (section & CFG_HLP_COUNTER)  Debug(FPSTR(HELP_COUNTER));
+    if (section & CFG_HLP_SENSOR)   Debug(FPSTR(HELP_SENSOR));
   }
 }
 
@@ -645,7 +643,9 @@ void execCmd(char *line, uint32_t clientid)
     } else if (!strcasecmp_P(cmd, PSTR("reset")) ) {
 
       if (!strcasecmp_P(par1, PSTR("sdk"))) {
+        #ifdef ESP8266
         ESP.eraseConfig(); // Delete SDK Config (Wifi Credentials)
+        #endif
       } else if (!strcasecmp_P(par1, PSTR("config"))) {
         resetConfig();
       } else if (!strcasecmp_P(par1, PSTR("board"))) {
@@ -990,7 +990,6 @@ void execCmd(char *line, uint32_t clientid)
 
         // counter command
       } else if (!strcasecmp_P(cmd, PSTR("cnt")) ) {
-        uint16_t val;
 
         Debugf("Cmd='cnt_','%s','%s','%s'\r\n", par1 ? par1 : "null", par2 ? par2 : "null", par3 ? par3 : "null");
 

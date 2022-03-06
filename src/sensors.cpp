@@ -527,7 +527,6 @@ uint8_t si7021_checkCRC(uint16_t data, uint8_t check)
   ====================================================================== */
 int8_t si7021_readRegister(uint8_t * value)
 {
-  uint8_t error ;
 
   // Request user register
   Wire.beginTransmission(SI7021_I2C_ADDRESS);

@@ -22,22 +22,14 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
+// Include main project include file
+#include "NRJMeter.h"
 #include "PString.h"
-#include <FS.h>
 
 extern char floggerbuffer[255];
 extern PString flogger;
 
-// Define here what serial to use for debug
-//#define DEBUG_SERIAL	Serial
-#define DEBUG_SERIAL	Serial1
-#define DEBUG_SERIAL1  
-
-#ifdef DEBUG_SERIAL
-
-	// Classic debug symbol
-	#define DEBUG
-
+#ifdef DEBUG
 	// debug functions
 	#define Debug(x)     	{ if (config.config & CFG_DEBUG) {DEBUG_SERIAL.print(x);} if (config.config & CFG_LOGGER) {flogger.print(x); floggerflush();} }
 	#define Debug2(x,y)  	{ if (config.config & CFG_DEBUG) {DEBUG_SERIAL.print(x,y);} if (config.config & CFG_LOGGER) {flogger.print(x,y); floggerflush();} }

@@ -27,8 +27,6 @@
 #include <map>
 #include <string>
 
-#define TINFO_SERIAL  Serial
-
 // Exported variables/object instancied in main sketch
 // ===================================================
 

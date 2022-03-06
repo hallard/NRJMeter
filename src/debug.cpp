@@ -27,21 +27,21 @@ PString flogger(floggerbuffer, sizeof(floggerbuffer));
 
 void floggerflush()
 {
-  if(SPIFFS.begin())
+  if(LittleFS.begin())
   {
 
    //check max size & switch file if needed
-  File fr = SPIFFS.open("/log.txt", "r");
+  File fr = LittleFS.open("/log.txt", "r");
   if(fr)
   {
     if (fr.size() >= 10000)
       {
         fr.close();
-        if (SPIFFS.exists("/log.1.txt"))
+        if (LittleFS.exists("/log.1.txt"))
         {
-          SPIFFS.remove("/log.1.txt");
+          LittleFS.remove("/log.1.txt");
         }
-        SPIFFS.rename("/log.txt","/log.1.txt");
+        LittleFS.rename("/log.txt","/log.1.txt");
       }
       else
       {
@@ -50,7 +50,7 @@ void floggerflush()
   }
    
    // open file for writing
-  File f = SPIFFS.open("/log.txt", "a+");
+  File f = LittleFS.open("/log.txt", "a+");
   if (f) {
       f.print(floggerbuffer);
       flogger.begin();

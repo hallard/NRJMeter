@@ -25,7 +25,10 @@
 #include <string>
 
 #include "webserver.h"
-#include "TInfo.h"
+//#include "TInfo.h"
+
+// because ESPAsyncWebServer check WEBSERVER_H constant to build some parts
+#include <ESPAsyncWebServer.h>
 
 // Web server
 AsyncWebServer web_server(80);
@@ -69,7 +72,7 @@ class CaptiveRequestHandler : public AsyncWebHandler {
     void handleRequest(AsyncWebServerRequest *request) {
       Debugf("Captive request to %s\n", request->url().c_str());
       String location = "http://" + WiFi.softAPIP().toString();
-      if (request->host() == WiFi.hostname() + ".local")
+      if (request->host() ==  String(WiFi_GetHostname()) + ".local")
         location += request->url();
       request->redirect(location);
     }
@@ -140,7 +143,7 @@ void handleFormConfig(AsyncWebServerRequest *request)
   // Cant't use PSTR CFG_SAVE here, crash dump hasArg don't have _P
   if ( request->hasArg( "save") ) {
     uint8_t params = request->params();
-    int i, l;
+    int i;
     char buff[CFG_SERIAL_BUFFER_SIZE + 2]; // Assume Max Len buffer for Arg + = + value
     Debugf("===== Posted configuration with %d parameters\r\n", params);
     Debugflush();
@@ -159,7 +162,7 @@ void handleFormConfig(AsyncWebServerRequest *request)
       if (param->name() != "save") {
         sprintf_P(buff, PSTR("%s %s"), param->name().c_str(), param->value().c_str());
         execCmd(buff);
-        wdt_reset();
+        WDT_RESET();
       }
     }
 
@@ -185,7 +188,7 @@ void handleFormConfig(AsyncWebServerRequest *request)
 
 /* ======================================================================
   Function: handleSpiffsOperation
-  Purpose : hadle SPIFFS operation like file delete
+  Purpose : hadle LittleFS operation like file delete
   Input   : -
   Output  : -
   Comments: -
@@ -193,7 +196,7 @@ void handleFormConfig(AsyncWebServerRequest *request)
 void handleSpiffsOperation(AsyncWebServerRequest *request)
 {
   String response = "";
-  int ret;
+  int ret = 0;
 
   if (request->hasArg("action") && request->hasArg("file"))
   {
@@ -202,9 +205,9 @@ void handleSpiffsOperation(AsyncWebServerRequest *request)
 
     if (action == "delete")
     {
-      if (SPIFFS.exists(file))
+      if (LittleFS.exists(file))
       {
-        if (SPIFFS.remove(file))
+        if (LittleFS.remove(file))
         {
           response += "File deleted!";
           ret = 200;
@@ -227,7 +230,6 @@ void handleSpiffsOperation(AsyncWebServerRequest *request)
     response += "Missing argument(s)";
     ret = 400;
   }
-
   request->send ( ret, "text/plain", response);
 }
 
@@ -305,10 +307,11 @@ String sysJSONTable(AsyncWebServerRequest * request)
 {
   String JsonStr = "";
 
+  
   // If Web request or just string asking, we'll do JSon stuff
   // in async response,
-  AsyncJsonResponse * response = new AsyncJsonResponse(true);
-  JsonArray& arr = response->getRoot();
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  DynamicJsonDocument root(2048);
 
   // Web request ?
   if (request) {
@@ -317,10 +320,12 @@ String sysJSONTable(AsyncWebServerRequest * request)
     DebugF("Getting system JSON table...");
   }
 
-  { JsonObject& item = arr.createNestedObject();
+  StaticJsonDocument<1024> doc;
+  JsonArray arr = doc.to<JsonArray>();
+
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Uptime";
     char buff[64];
-    int32_t adc;
     int sec = seconds;
     int min = sec / 60;
     int hr = min / 60;
@@ -329,100 +334,113 @@ String sysJSONTable(AsyncWebServerRequest * request)
   }
 
   // Free mem should be last one but not really readable on bottom table
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Free Ram";
-    item[FPSTR(FP_VA)] = formatSize(system_get_free_heap_size());
+    item[FPSTR(FP_VA)] = formatSize(ESP_Free_Heap_Size());
   }
 
   char version[7];
   sprintf_P(version, PSTR("%d.%d"), NRJMETER_VERSION_MAJOR, NRJMETER_VERSION_MINOR);
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Firmware Version";
     item[FPSTR(FP_VA)] = version;
   }
 
   String compiled =  __DATE__ " " __TIME__;
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "compiled";
     item[FPSTR(FP_VA)] = compiled;
   }
 
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "SDK Version";
-    item[FPSTR(FP_VA)] = system_get_sdk_version();
+    item[FPSTR(FP_VA)] = ESP_Get_SDK_Version();
   }
 
   char analog[8];
   sprintf_P( analog, PSTR("%d mV"), ((1000 * analogRead(A0)) / 1024) );
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Analog";
     item[FPSTR(FP_VA)] = analog;
   }
 
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Reset cause";
-    item[FPSTR(FP_VA)] = ESP.getResetReason();
+    item[FPSTR(FP_VA)] = ESP_getResetReason();
   }
 
   char chipid[9];
-  sprintf_P(chipid, PSTR("0x%06X"), system_get_chip_id() );
-  { JsonObject& item = arr.createNestedObject();
+  sprintf_P(chipid, PSTR("0x%06X"), ESP_getChipId() );
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Chip ID";
     item[FPSTR(FP_VA)] = chipid;
   }
 
+#if defined (ESP8266)
   char boot_version[7];
   sprintf_P(boot_version, PSTR("0x%0X"), system_get_boot_version() );
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Boot Version";
     item[FPSTR(FP_VA)] = boot_version ;
   }
+#elif defined (ESP32)
+  char id_revision[4];
+  sprintf_P(id_revision, PSTR("0x%02X"), ESP.getChipRevision() );
+  { JsonObject item = arr.createNestedObject();
+    item[FPSTR(FP_NA)] = "Chip ID Revision";
+    item[FPSTR(FP_VA)] = id_revision ;
+  }
+#endif
 
   // WiFi Informations
   // =================
   const char* modes[] = { "NULL", "STA", "AP", "STA+AP" };
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Wifi Mode";
-    item[FPSTR(FP_VA)] = modes[wifi_get_opmode()];
+    item[FPSTR(FP_VA)] = modes[WiFi_GetMode()];
   }
 
+     uint8_t getChipRevision();
+
+#ifdef ESP8266
+
   const char* phymodes[] = { "", "B", "G", "N" };
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Wifi 802.11 Type";
     item[FPSTR(FP_VA)] = phymodes[(int) wifi_get_phy_mode()];
   }
 
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Wifi Channel";
     item[FPSTR(FP_VA)] = wifi_get_channel();
   }
 
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Wifi AP ID";
     item[FPSTR(FP_VA)] = wifi_station_get_current_ap_id();
   }
 
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Wifi Status";
     item[FPSTR(FP_VA)] = (int) wifi_station_get_connect_status();
   }
 
-  { JsonObject& item = arr.createNestedObject();
-    item["na"] = "Wifi established in (ms)";
-    item["va"] = wifi_connect_time;
-  }
-
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Wifi Autoconnect";
     item[FPSTR(FP_VA)] = wifi_station_get_auto_connect();
   }
 
+  { JsonObject item = arr.createNestedObject();
+    item["na"] = "Wifi established in (ms)";
+    item["va"] = wifi_connect_time;
+  }
 
+#endif
 
   // Sensors Stuff
   // =============
   char sensors[32] = "";
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "I2C devices";
     if (config.config & CFG_SI7021) strcat(sensors, "SI7021 ");
     if (config.config & CFG_SHT10) strcat(sensors, "SHT1x ");
@@ -434,13 +452,13 @@ String sysJSONTable(AsyncWebServerRequest * request)
 
   // Flash Stuff
   // ===========
-  String FlashChipRealSize = formatSize(ESP.getFlashChipRealSize());
-  { JsonObject& item = arr.createNestedObject();
+  String FlashChipRealSize = formatSize(ESP_getFlashChipSize());
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Flash Real Size";
     item[FPSTR(FP_VA)] = FlashChipRealSize ;
   }
 
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Flash IDE Speed";
     item[FPSTR(FP_VA)] = ESP.getFlashChipSpeed() / 1000000 ;
   }
@@ -448,50 +466,58 @@ String sysJSONTable(AsyncWebServerRequest * request)
   char ide_mode[8];
   FlashMode_t im = ESP.getFlashChipMode();
   sprintf_P(ide_mode, PSTR("%s"), im == FM_QIO ? "QIO" : im == FM_QOUT ? "QOUT" : im == FM_DIO ? "DIO" : im == FM_DOUT ? "DOUT" : "UNKNOWN" );
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Flash IDE Mode";
     item[FPSTR(FP_VA)] = ide_mode;
   }
 
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Firmware Size";
     item[FPSTR(FP_VA)] = formatSize(ESP.getSketchSize());
   }
 
-  { JsonObject& item = arr.createNestedObject();
+  { JsonObject item = arr.createNestedObject();
     item[FPSTR(FP_NA)] = "Free Size";
     item[FPSTR(FP_VA)] = formatSize(ESP.getFreeSketchSpace());
   }
 
   // SPIFFS Informations
   // ===================
+
+  size_t usedBytes ;
+  size_t totalBytes ;
+  #if defined (ESP8266)
   FSInfo info;
-  SPIFFS.info(info);
+  LittleFS.info(info);
+  usedBytes = info.usedBytes;
+  totalBytes = info.totalBytes;
+  #elif defined (ESP32)
+  usedBytes = LittleFS.usedBytes();
+  totalBytes = LittleFS.totalBytes();
+  #endif
 
-  { JsonObject& item = arr.createNestedObject();
-    item[FPSTR(FP_NA)] = "SPIFFS Total";
-    item[FPSTR(FP_VA)] =  formatSize(info.totalBytes);
+  { JsonObject item = arr.createNestedObject();
+    item[FPSTR(FP_NA)] = "LittleFS Total";
+    item[FPSTR(FP_VA)] =  formatSize(totalBytes);
   }
 
-  { JsonObject& item = arr.createNestedObject();
-    item[FPSTR(FP_NA)] = "SPIFFS Used";
-    item[FPSTR(FP_VA)] = formatSize(info.usedBytes);
+  { JsonObject item = arr.createNestedObject();
+    item[FPSTR(FP_NA)] = "LittleFS Used";
+    item[FPSTR(FP_VA)] = formatSize(usedBytes);
   }
 
-  { JsonObject& item = arr.createNestedObject();
-    item[FPSTR(FP_NA)] = "SPIFFS Occupation (%)";
-    item[FPSTR(FP_VA)] = 100 * info.usedBytes / info.totalBytes;
+  { JsonObject item = arr.createNestedObject();
+    item[FPSTR(FP_NA)] = "LittleFS Occupation (%)";
+    item[FPSTR(FP_VA)] = 100 * usedBytes / totalBytes;
   }
 
   // Web request send response to client
-  size_t jsonlen ;
   if (request) {
-    jsonlen = response->setLength();
+    serializeJson(arr, *response);
     request->send(response);
   } else {
     // Send JSon to our string
-    arr.printTo(JsonStr);
-    jsonlen =  arr.measureLength();
+    serializeJson(root, JsonStr);
     // Since it's nor a WEB request, we need to manually delete
     // response object so ArduinJSon object is freed
     delete response;
@@ -513,11 +539,10 @@ String tinfoJSONTable(AsyncWebServerRequest * request)
 {
   String JsonStr = "";
 
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  
   // If Web request or just string asking, we'll do JSon stuff
   // in async response,
-  AsyncJsonResponse * response = new AsyncJsonResponse();
-  JsonObject& root = response->getRoot();
-
   if (request) {
     DebugF("Serving /tinfo page...");
   } else {
@@ -527,7 +552,8 @@ String tinfoJSONTable(AsyncWebServerRequest * request)
   //Ensure we get last TInfo values
   updateTInfo();
 
-  JsonArray& a_tinfo = root.createNestedArray("tinfo");
+  DynamicJsonDocument doc(1024);
+  JsonArray a_tinfo = doc.createNestedArray("tinfo");
 
   std::map<std::string, std::string>::iterator iterator;
 
@@ -535,7 +561,7 @@ String tinfoJSONTable(AsyncWebServerRequest * request)
     std::string k = iterator->first;
     std::string v = iterator->second;
 
-    JsonObject& o_tinfo = a_tinfo.createNestedObject();
+    JsonObject o_tinfo = a_tinfo.createNestedObject();
     o_tinfo[FPSTR(FP_NA)] = k.c_str();
     o_tinfo[FPSTR(FP_VA)] = v.c_str();
     String checksum = "";
@@ -555,22 +581,21 @@ String tinfoJSONTable(AsyncWebServerRequest * request)
 
   if (tinfo_values["PAPP"] != "" && tinfo_values["IINST"] != "")
   {
-    JsonArray& a_papp_iinst = root.createNestedArray("papp_iinst");
-    JsonObject& o_papp_iinst = a_papp_iinst.createNestedObject();
+    JsonArray a_papp_iinst = doc.createNestedArray("papp_iinst");
+    JsonObject o_papp_iinst = a_papp_iinst.createNestedObject();
     o_papp_iinst[FPSTR(PAPP)] = tinfo_values["PAPP"].c_str();
     o_papp_iinst[FPSTR(IINST)] = tinfo_values["IINST"].c_str();
     o_papp_iinst[FPSTR(FP_SEEN)] = (int)((config.config & CFG_TINFO || config.config & CFG_DEMO_MODE) ? tinfo_last_seen : -1);
   }
 
   // Web request send response to client
-  size_t jsonlen ;
   if (request) {
-    jsonlen = response->setLength();
+    serializeJson(doc, *response);
     request->send(response);
+
   } else {
     // Send JSon to our string
-    root.printTo(JsonStr);
-    jsonlen =  root.measureLength();
+    serializeJson(doc, JsonStr);
     // Since it's nor a WEB request, we need to manually delete
     // response object so ArduinJSon object is freed
     delete response;
@@ -592,10 +617,11 @@ String sensorsJSONTable(AsyncWebServerRequest * request)
 {
   String JsonStr = "";
 
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+
   // If Web request or just string asking, we'll do JSon stuff
   // in async response,
-  AsyncJsonResponse * response = new AsyncJsonResponse();
-  JsonObject& root = response->getRoot();
+  DynamicJsonDocument root(512);
 
   if (request) {
     DebugF("Serving /sensors page...");
@@ -606,32 +632,30 @@ String sensorsJSONTable(AsyncWebServerRequest * request)
   // Do a measurment
   sensors_measure();
 
-  JsonArray& a_si7021 = root.createNestedArray("si7021");
-  JsonObject& o_si7021 = a_si7021.createNestedObject();
+  JsonArray a_si7021 = root.createNestedArray("si7021");
+  JsonObject o_si7021 = a_si7021.createNestedObject();
   o_si7021[FPSTR(FP_TEMPERATURE)] = si7021_temperature / 100.0;
   o_si7021[FPSTR(FP_HUMIDITY)]    = si7021_humidity / 100.0 ;
   o_si7021[FPSTR(FP_SEEN)]        = (int)((config.config & CFG_SI7021 || config.config & CFG_DEMO_MODE) ? si7021_last_seen : -1);
 
-  JsonArray& a_sht10 = root.createNestedArray("sht10");
-  JsonObject& o_sht10 = a_sht10.createNestedObject();
+  JsonArray a_sht10 = root.createNestedArray("sht10");
+  JsonObject o_sht10 = a_sht10.createNestedObject();
   o_sht10[FPSTR(FP_TEMPERATURE)] = sht1x_temperature / 100.0;
   o_sht10[FPSTR(FP_HUMIDITY)]    = sht1x_humidity / 100.0 ;
   o_sht10[FPSTR(FP_SEEN)]        = (int)((config.config & CFG_SHT10 || config.config & CFG_DEMO_MODE) ? sht1x_last_seen : -1);
 
-  JsonArray& a_mcp3421 = root.createNestedArray("mcp3421");
-  JsonObject& o_mcp3421 = a_mcp3421.createNestedObject();
+  JsonArray a_mcp3421 = root.createNestedArray("mcp3421");
+  JsonObject o_mcp3421 = a_mcp3421.createNestedObject();
   o_mcp3421[FPSTR(FP_POWER)] = mcp3421_power;
   o_mcp3421[FPSTR(FP_SEEN)]  = (int)((config.config & CFG_MCP3421 || config.config & CFG_DEMO_MODE) ? mcp3421_last_seen : -1);
 
   // Web request send response to client
-  size_t jsonlen ;
   if (request) {
-    jsonlen = response->setLength();
-    request->send(response);
+    serializeJson(root, *response);
+    request->send(response);    
   } else {
     // Send JSon to our string
-    root.printTo(JsonStr);
-    jsonlen =  root.measureLength();
+    serializeJson(root, JsonStr);
     // Since it's nor a WEB request, we need to manually delete
     // response object so ArduinJSon object is freed
     delete response;
@@ -652,14 +676,13 @@ String sensorsJSONTable(AsyncWebServerRequest * request)
 void confJSONTable(AsyncWebServerRequest * request)
 {
   IPAddress ip_addr;
-  size_t l;
   String str;
 
-  AsyncJsonResponse * response = new AsyncJsonResponse();
-  JsonObject& root = response->getRoot();
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  DynamicJsonDocument root(3072);
 
   DebuglnF("Serving /config page...");
-  // Debugf("Stage 1 : JSONBufferSize:%d  FreeRam:%d\r\n", response->getSize(), ESP.getFreeHeap());
+  Debugf("Stage 1 : JSONBufferSize:%d  FreeRam:%d\r\n", measureJson(root), ESP.getFreeHeap());
 
   root[FPSTR(CFG_SSID)]    = config.ssid;
   root[FPSTR(CFG_PSK)]     = config.psk;
@@ -727,9 +750,8 @@ void confJSONTable(AsyncWebServerRequest * request)
   root[FPSTR(CFG_MQTT_PWD)] = config.mqtt.pwd;
   root[FPSTR(CFG_MQTT_INT)] = inTopic.c_str();
   root[FPSTR(CFG_MQTT_OUT)] = outTopic.c_str();
-  root[FPSTR(CFG_MQTT_QOS)] = MQTT_QOS_STRING;
-  root[FPSTR(CFG_MQTT_RET)] = MQTT_RET_STRING;
-  root[FPSTR(CFG_MQTT_VER)] = MQTT_VER_STRING;
+  root[FPSTR(CFG_MQTT_QOS)] = MQTT_QOS;
+  root[FPSTR(CFG_MQTT_RET)] = MQTT_RETAIN;
   #endif
 
   root[FPSTR(CFG_HTTP_USR)] = config.http_usr;
@@ -751,6 +773,8 @@ void confJSONTable(AsyncWebServerRequest * request)
   root[FPSTR(CFG_SENS_SHT10)] = (unsigned int) config.sensors.en_sht10;
   root[FPSTR(CFG_SENS_MCP3421)] = (unsigned int) config.sensors.en_mcp3421;
 
+  Debugf("Stage 2 : JSONBufferSize:%d  FreeRam:%d\r\n", measureJson(root), ESP.getFreeHeap());
+
   root[FPSTR(CFG_CFG_RGBLED)] = (config.config & CFG_RGB_LED) ? 1 : 0;
   root[FPSTR(CFG_CFG_DEBUG)]  = (config.config & CFG_DEBUG) ? 1 : 0;
   root[FPSTR(CFG_CFG_LOGGER)]  = (config.config & CFG_LOGGER) ? 1 : 0;
@@ -766,24 +790,35 @@ void confJSONTable(AsyncWebServerRequest * request)
   root[FPSTR(CFG_CFG_HASOLED)] = (config.config & CFG_HASOLED) ? 1 : 0;
   root[FPSTR(CFG_CFG_TINFO)]  = (config.config & CFG_TINFO) ? 1 : 0;
 
+  Debugf("Stage 3 : JSONBufferSize:%d  FreeRam:%d\r\n", measureJson(root), ESP.getFreeHeap());
+
   root[FPSTR(CFG_LED_BRIGHTNESS)] = (unsigned int) config.led_bright;
   root[FPSTR(CFG_LED_HEARTBEAT)]  = (unsigned int) config.led_hb;
   root[FPSTR(CFG_LED_NUM)]        = (unsigned int) config.led_num;
   root[FPSTR(CFG_LED_GPIO)]       = (unsigned int) config.led_gpio;
   root[FPSTR(CFG_LED_TYPE)]       = (unsigned int) config.led_type;
 
+  Debugf("Stage 4 : JSONBufferSize:%d  FreeRam:%d\r\n", measureJson(root), ESP.getFreeHeap());
+
   root[FPSTR(CFG_SENS_FREQ)] = (unsigned int) config.sensors.freq;
   str = config.sensors.hum_min_warn; str += "," ; str += config.sensors.hum_max_warn;
+  Debugln(str);
   root[FPSTR(CFG_SENS_HUM_LED)]   = str;
   str = config.sensors.temp_min_warn; str += "," ; str += config.sensors.temp_max_warn;
+  Debugln(str);
   root[FPSTR(CFG_SENS_TEMP_LED)]  = str;
   str = config.sensors.pwr_min_warn; str += "," ; str += config.sensors.pwr_max_warn;
+  Debugln(str);
   root[FPSTR(CFG_SENS_PWR_LED)]  = str;
 
-  size_t jsonlen ;
-  jsonlen = response->setLength();
+  Debugf("Stage F : JSONBufferSize:%d  FreeRam:%d\r\n", measureJson(root), ESP.getFreeHeap());
+
+  serializeJson(root, *response);
   request->send(response);
-  //Debugf("Json size %lu bytes\r\n", jsonlen);
+
+  //serializeJson(root, *response);
+  //request->send(response);
+
 }
 
 /* ======================================================================
@@ -795,34 +830,61 @@ void confJSONTable(AsyncWebServerRequest * request)
   ====================================================================== */
 void spiffsJSONTable(AsyncWebServerRequest * request)
 {
-  AsyncJsonResponse * response = new AsyncJsonResponse();
-  JsonObject& root = response->getRoot();
+  size_t usedBytes ;
+  size_t totalBytes ;
+
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
 
   DebugF("Serving /spiffs page...");
 
   // Loop trough all files
-  JsonArray& a_files = root.createNestedArray("files");
-  Dir dir = SPIFFS.openDir("/");
-  while (dir.next()) {
-    JsonObject& o_item = a_files.createNestedObject();
-    String fsn = dir.fileName();
-    //Substring added to present SPIFFS bad characters when filename reach 32 char which is the maximum. Should be fixed in next SPIFFS firmware release?
-    o_item[FPSTR(FP_NA)] = (fsn.length() >= 32 ? fsn.substring(0, 32) : fsn);
-    o_item[FPSTR(FP_VA)] = dir.fileSize();
-    o_item[FPSTR(FP_AC)] = o_item[FPSTR(FP_NA)];
-  }
+  DynamicJsonDocument doc(2048);
+  JsonArray a_files = doc.createNestedArray("files");
 
-  // Get SPIFFS File system informations
+  #ifdef ESP8266
   FSInfo info;
-  SPIFFS.info(info);
-  JsonArray& a_spiffs = root.createNestedArray("spiffs");
-  JsonObject& o_item = a_spiffs.createNestedObject();
-  o_item["Total"] = info.totalBytes;
-  o_item["Used"]  = info.usedBytes ;
-  o_item["Ram"]   = system_get_free_heap_size();
+  LittleFS.info(info);
+  usedBytes = info.usedBytes;
+  totalBytes = info.totalBytes;
+  Dir dir = LittleFS.openDir("/");
+  while (dir.next()) {
+    if (!dir.isDirectory()) {
+      JsonObject o_item = a_files.createNestedObject();
+      String fsn = dir.fileName();
+    //Substring added to present LittleFS bad characters when filename reach 32 char which is the maximum. Should be fixed in next SPIFFS firmware release?
+      o_item[FPSTR(FP_NA)] = (fsn.length() >= 32 ? fsn.substring(0, 32) : fsn);
+      o_item[FPSTR(FP_VA)] = dir.fileSize();
+      o_item[FPSTR(FP_AC)] = o_item[FPSTR(FP_NA)];
+    }
+  }
+  #endif
 
-  size_t jsonlen ;
-  jsonlen = response->setLength();
+  #ifdef ESP32
+  usedBytes = LittleFS.usedBytes();
+  totalBytes = LittleFS.totalBytes();
+  File fsroot = LittleFS.open("/");
+
+  if (fsroot && fsroot.isDirectory()) {
+    File file = fsroot.openNextFile();
+    while(file){
+      JsonObject o_item = a_files.createNestedObject();
+      o_item[FPSTR(FP_NA)] = file.name();
+      o_item[FPSTR(FP_VA)] = file.isDirectory() ? 0 : file.size();
+      o_item[FPSTR(FP_AC)] = o_item[FPSTR(FP_NA)];
+      file = fsroot.openNextFile();
+    }
+  }
+  #endif
+
+  // Get LittleFS File system informations
+  JsonObject o_fs = doc.createNestedObject("spiffs");
+  Debugf("Total=%d", totalBytes);
+  Debugf("Used=%d", usedBytes);
+  o_fs["Total"] = totalBytes;
+  o_fs["Used"]  = usedBytes ;
+  o_fs["Ram"]   = ESP_Free_Heap_Size();
+
+  serializeJson(doc, *response);
   request->send(response);
   //Debugf("Json size %lu bytes\r\n", jsonlen);
 }
@@ -836,8 +898,9 @@ void spiffsJSONTable(AsyncWebServerRequest * request)
   ====================================================================== */
 void wifiScanJSON(AsyncWebServerRequest * request)
 {
-  AsyncJsonResponse * response = new AsyncJsonResponse();
-  JsonObject& root = response->getRoot();
+  
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  DynamicJsonDocument root(1024);
 
   // Just to debug where we are
   Debug(F("Serving /wifiscan page..."));
@@ -852,32 +915,39 @@ void wifiScanJSON(AsyncWebServerRequest * request)
     WiFi.scanNetworks(true);
   } else if (n) {
     char buff[] = "????";
-    int qual;
 
-    JsonArray& a_net = root.createNestedArray("networks");
+    JsonArray a_net = root.createNestedArray("networks");
     // Just to debug where we are
     Debugf("Scan done:%d networks!\r\n", n);
 
     for (int i = 0; i < n; ++i) {
       switch (WiFi.encryptionType(i)) {
+        #if defined (ESP8266)
         case ENC_TYPE_NONE: strcpy_P(buff, PSTR("Open"));  break;
         case ENC_TYPE_WEP:  strcpy_P(buff, PSTR("WEP")) ;  break;
         case ENC_TYPE_TKIP: strcpy_P(buff, PSTR("WPA")) ;  break;
         case ENC_TYPE_CCMP: strcpy_P(buff, PSTR("WPA2"));  break;
         case ENC_TYPE_AUTO: strcpy_P(buff, PSTR("Auto"));  break;
+        #elif defined (ESP32)
+        case WIFI_AUTH_OPEN:            strcpy_P(buff, PSTR("Open"));  break;
+        case WIFI_AUTH_WEP:             strcpy_P(buff, PSTR("WEP")) ;  break;
+        case WIFI_AUTH_WPA_PSK:         strcpy_P(buff, PSTR("WPA/PSK")) ;  break;
+        case WIFI_AUTH_WPA2_PSK:        strcpy_P(buff, PSTR("WPA2/PSK")) ;  break;
+        case WIFI_AUTH_WPA_WPA2_PSK:    strcpy_P(buff, PSTR("WPA/WPA2/PSK")) ;  break;
+        case WIFI_AUTH_WPA2_ENTERPRISE: strcpy_P(buff, PSTR("WPA2 Enterprise"));  break;
+        #endif
       }
 
       Debugf("[%d] '%s' Encryption=%s Channel=%d\r\n", i, WiFi.SSID(i).c_str(), buff, WiFi.channel(i));
 
-      JsonObject& item = a_net.createNestedObject();
+      JsonObject item = a_net.createNestedObject();
       item[FPSTR(FP_SSID)]       = WiFi.SSID(i);
       item[FPSTR(FP_RSSI)]       = WiFi.RSSI(i);
       item[FPSTR(FP_ENCRYPTION)] = buff;
       item[FPSTR(FP_CHANNEL)]    = WiFi.channel(i);
     }
 
-    size_t jsonlen ;
-    jsonlen = response->setLength();
+    serializeJson(root, *response);
     request->send(response);
     //Debugf("%d bytes\r\n", jsonlen);
 
@@ -898,6 +968,8 @@ void wifiScanJSON(AsyncWebServerRequest * request)
 String logJSONTable(AsyncWebServerRequest * request)
 {
   String JsonStr = "";
+
+  #ifdef COMPILE_ALL
   int r = 0;
 
   // If Web request or just string asking, we'll do JSon stuff
@@ -916,9 +988,9 @@ String logJSONTable(AsyncWebServerRequest * request)
   {
     config.config ^= CFG_LOGGER;
 
-    if (SPIFFS.exists("/log.1.txt"))
+    if (LittleFS.exists("/log.1.txt"))
     {
-      File f = SPIFFS.open("/log.1.txt", "r");
+      File f = LittleFS.open("/log.1.txt", "r");
       while (f.available()) {
         r++;
         String line = f.readStringUntil('\n');
@@ -929,9 +1001,9 @@ String logJSONTable(AsyncWebServerRequest * request)
       f.close();
     }
 
-    if (SPIFFS.exists("/log.txt"))
+    if (LittleFS.exists("/log.txt"))
     {
-      File f = SPIFFS.open("/log.txt", "r");
+      File f = LittleFS.open("/log.txt", "r");
       while (f.available()) {
         r++;
         String line = f.readStringUntil('\n');
@@ -965,7 +1037,7 @@ String logJSONTable(AsyncWebServerRequest * request)
     delete response;
   }
   //Debugf("Json size %lu bytes\r\n", jsonlen);
-
+#endif
   // Will be empty for web request
   return JsonStr;
 }
@@ -1001,7 +1073,9 @@ void handleFactoryReset(AsyncWebServerRequest * request)
   Debug(F("Serving /factory_reset page..."));
   request->send ( 200, "text/plain", FPSTR(FP_RESTART) );
   Debugln(F("Ok!"));
+  #ifdef ESP8266
   ESP.eraseConfig(); // Delete SDK Config (Wifi Credentials)
+  #endif
   resetConfig();
   resetBoard();
 }
@@ -1161,7 +1235,7 @@ void webSocketEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsE
 
         if (info->final && info->index == 0 && info->len == len) {
           //the whole message is in a single frame and we got all of it's data
-          Debugf("ws[%s][#%u] %s-msg[%lu]: ", server->url(), client->id(), (info->opcode == WS_TEXT) ? "text" : "binary", (uint32_t) info->len);
+          Debugf("ws[%s][#%u] %s-msg[%lld]: ", server->url(), client->id(), (info->opcode == WS_TEXT) ? "text" : "binary", info->len);
 
           // Search if it's a known client
           for (uint8_t index = 0; index < MAX_WS_CLIENT ; index++) {
@@ -1280,7 +1354,7 @@ void WS_setup(void)
   });
 
   //Add files to .exclude.files
-  File f = SPIFFS.open("/.exclude.files", "w");
+  File f = LittleFS.open("/.exclude.files", "w");
   f.println("/.exclude.files");
   f.println("/*.js.gz");
   f.println("/*.css.gz");
@@ -1288,8 +1362,12 @@ void WS_setup(void)
   f.println("/*.woff2");
   f.close();
 
-  // Create SPIFFS Editor
+  // Create LittleFS Editor
+  #ifdef ESP32
+  web_server.addHandler(new SPIFFSEditor(LittleFS, http_username, http_password));
+  #else
   web_server.addHandler(new SPIFFSEditor(http_username, http_password));
+  #endif
 
   // handle captive portal only for access point
   web_server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
@@ -1304,13 +1382,13 @@ void WS_setup(void)
   web_server.on("/spiffs",       spiffsJSONTable);
   web_server.on("/spiffs_op",    handleSpiffsOperation);
   web_server.on("/wifiscan",     wifiScanJSON);
-  web_server.on("/factory_reset", handleFactoryReset);
+  web_server.on("/factory_reset",handleFactoryReset);
   web_server.on("/config_reset", handleConfigReset);
   web_server.on("/reset",        handleReset);
 
   //web_server.rewrite("/index.htm", "dpi.htm").setFilter(ON_AP_FILTER);
-  web_server.serveStatic("/", SPIFFS, "/index.htm").setCacheControl("max-age:86400");
-  web_server.serveStatic("/", SPIFFS, "/"         ).setCacheControl("max-age:86400");
+  web_server.serveStatic("/", LittleFS, "/index.htm").setCacheControl("max-age:86400");
+  web_server.serveStatic("/", LittleFS, "/"         ).setCacheControl("max-age:86400");
 
   // All other not known
   // redirect all captive portal to default page

@@ -20,10 +20,7 @@
 //
 // **********************************************************************************
 
-#include "webclient.h"
-
-#include "TInfo.h"
-#include "MQTT.h"
+#include "NRJMeter.h"
 
 /* ======================================================================
   Function: httpPost
@@ -39,15 +36,26 @@ boolean httpPost(char * host, uint16_t port, char * url)
   boolean ret = false;
 
   if ( WiFi.status() == WL_CONNECTED && *host) {
+
+    WiFiClient client;
     HTTPClient http;
 
     unsigned long start = millis();
 
+    String _url ="";
+
+    if (port == 443) {
+      _url ="https://" + String(host) ;
+    } else {
+      _url ="http://" + String(host) + ":" + String(port);
+    }
+    _url += "/" + String(url);
+
     // Post should not take more than 2.5 sec
     http.setTimeout(2500);
 
-    // configure traged server and url
-    http.begin(host, port, url);
+    // configure targed server and url
+    http.begin(client, _url);
 
     Debugf("http%s://%s:%d%s => ", port == 443 ? "s" : "", host, port, url);
 
@@ -68,7 +76,7 @@ boolean httpPost(char * host, uint16_t port, char * url)
     }
 
     http.end();
-    Debugf(" in %d ms\r\n", millis() - start);
+    Debugf(" in %ld ms\r\n", millis() - start);
   } else {
     DebuglnF("Wifi not connected!");
   }
@@ -87,11 +95,9 @@ boolean jeedomPost(void)
 {
   boolean ret = false;
   char buff[128];
-  struct rst_info * p = ESP.getResetInfoPtr();
   String json = "";
 
   String url ;
-  boolean skip_item;
 
   url = *config.jeedom.url ? config.jeedom.url : "/";
   url += "?";
@@ -110,8 +116,8 @@ boolean jeedomPost(void)
   sprintf_P(buff, PSTR("uptime=%ld&"), seconds) ;
   url += buff;
 
-  sprintf_P(buff, PSTR("reset_cause=%d&"), p->reason) ;
-  url += buff;
+  //sprintf_P(buff, PSTR("reset_cause=%d&"), ESP_getResetReason()) ;
+  //url += buff;
 
   if (config.config & CFG_TINFO || config.config & CFG_DEMO_MODE)
   {
@@ -135,19 +141,19 @@ boolean jeedomPost(void)
   }
 
   // Does MCP3421 is enabled and seen
-  if (config.sensors.en_mcp3421 && config.config & CFG_MCP3421 || config.config & CFG_DEMO_MODE) {
+  if (config.sensors.en_mcp3421 && (config.config & CFG_MCP3421 || config.config & CFG_DEMO_MODE) ) {
     sprintf_P(buff, PSTR("mcp3421=%s&"), String(mcp3421_power).c_str());
     url += buff;
   }
 
   // Does SI7021 is enabled and seen
-  if (config.sensors.en_si7021 && config.config & CFG_SI7021 || config.config & CFG_DEMO_MODE) {
+  if (config.sensors.en_si7021 && (config.config & CFG_SI7021 || config.config & CFG_DEMO_MODE) ) {
     sprintf_P(buff, PSTR("si7021_temp=%s&si7021_hum=%s&"), String(si7021_temperature / 100.0).c_str(), String(si7021_humidity / 100.0).c_str());
     url += buff;
   }
 
   // Does SHT10 is enabled and seen
-  if (config.sensors.en_sht10 && config.config & CFG_SHT10 || config.config & CFG_DEMO_MODE) {
+  if (config.sensors.en_sht10 && (config.config & CFG_SHT10 || config.config & CFG_DEMO_MODE) ) {
     sprintf_P(buff, PSTR("sht10_temp=%s&sht10_hum=%s&sht10_hum_nc=%s&"),
               String(sht1x_temperature / 100.0).c_str(),
               String(sht1x_humidity / 100.0).c_str(),
@@ -184,7 +190,6 @@ boolean emoncmsPost(void)
   char buff[128];
 
   String url ;
-  struct rst_info * p = ESP.getResetInfoPtr();
   String json = "";
 
   url = *config.emoncms.url ? config.emoncms.url : "/";
@@ -217,21 +222,21 @@ boolean emoncmsPost(void)
   }
 
   // Does MCP3421 is enabled and seen
-  if (config.sensors.en_mcp3421 && config.config & CFG_MCP3421 || config.config & CFG_DEMO_MODE) {
+  if (config.sensors.en_mcp3421 && (config.config & CFG_MCP3421 || config.config & CFG_DEMO_MODE) ) {
     sprintf_P(buff, PSTR(",mcp3421:%s"), String(mcp3421_power).c_str());
     url += buff;
     json += buff;
   }
 
   // Does SI7021 is enabled and seen
-  if (config.sensors.en_si7021 && config.config & CFG_SI7021 || config.config & CFG_DEMO_MODE) {
+  if (config.sensors.en_si7021 && (config.config & CFG_SI7021 || config.config & CFG_DEMO_MODE) ) {
     sprintf_P(buff, PSTR(",si7021_temp:%s,si7021_hum:%s"), String(si7021_temperature / 100.0).c_str(), String(si7021_humidity / 100.0).c_str());
     url += buff;
     json += buff;
   }
 
   // Does SHT10 is enabled and seen
-  if (config.sensors.en_sht10 && config.config & CFG_SHT10 || config.config & CFG_DEMO_MODE) {
+  if (config.sensors.en_sht10 && (config.config & CFG_SHT10 || config.config & CFG_DEMO_MODE) ) {
     sprintf_P(buff, PSTR(",sht10_temp:%s,sht10_hum:%s,sht10_hum_nc:%s"),
               String(sht1x_temperature / 100.0).c_str(),
               String(sht1x_humidity / 100.0).c_str(),
@@ -241,7 +246,7 @@ boolean emoncmsPost(void)
     json += buff;
   }
 
-  sprintf_P(buff, PSTR(",reset_cause:%d}"), p->reason) ;
+  sprintf_P(buff, PSTR(",reset_cause:%s}"), ESP_getResetReason().c_str()) ;
   url += buff;
   json += buff;
 
@@ -273,7 +278,6 @@ boolean domoticzPost(void)
 
   String baseurl;
   String url;
-  struct rst_info * p = ESP.getResetInfoPtr();
 
   baseurl = *config.domz.url ? config.domz.url : "/";
 
@@ -301,15 +305,14 @@ boolean domoticzPost(void)
     if (config.domz.bmode & CFG_BMODE_MQTT)
     {
       String jsonmqttStr;
-      StaticJsonBuffer<200> jsonBuffer;
-      JsonObject& jsonmqtt = jsonBuffer.createObject();
+      StaticJsonDocument<200> jsonmqtt;
       jsonmqtt["idx"] = config.domz.idx_upt;
       jsonmqtt["nvalue"] = 0;
       String svalue = "";
       svalue += seconds;
       jsonmqtt["svalue"] = svalue.c_str();
 
-      jsonmqtt.printTo(jsonmqttStr);
+      serializeJson(jsonmqtt,jsonmqttStr);
 
       if (!mqttPost(config.domz.topic, jsonmqttStr.c_str()))
       {
@@ -338,7 +341,7 @@ boolean domoticzPost(void)
       url += "idx=";
       url += config.domz.idx_rst;
       url += "&switchcmd=Set%20Level&level=";
-      url += p->reason*10;
+      //url += ESP_getResetReason()*10;
 
       if (!httpPost( config.domz.host, config.domz.port, (char *) url.c_str()))
       {
@@ -349,14 +352,13 @@ boolean domoticzPost(void)
     if (config.domz.bmode & CFG_BMODE_MQTT)
     {
       String jsonmqttStr;
-      StaticJsonBuffer<200> jsonBuffer;
-      JsonObject& jsonmqtt = jsonBuffer.createObject();
+      StaticJsonDocument<200> jsonmqtt;
       jsonmqtt["command"] = "switchlight";
       jsonmqtt["idx"] = config.domz.idx_rst;
       jsonmqtt["switchcmd"] = "Set Level";
-      jsonmqtt["level"] = p->reason * 10;
+      //jsonmqtt["level"] = ESP_getResetReason() * 10;
 
-      jsonmqtt.printTo(jsonmqttStr);
+      serializeJson(jsonmqtt, jsonmqttStr);
 
       if (!mqttPost(config.domz.topic, jsonmqttStr.c_str()))
       {
@@ -393,15 +395,14 @@ boolean domoticzPost(void)
       if (config.domz.bmode & CFG_BMODE_MQTT)
       {
         String jsonmqttStr;
-        StaticJsonBuffer<200> jsonBuffer;
-        JsonObject& jsonmqtt = jsonBuffer.createObject();
+        StaticJsonDocument<200> jsonmqtt;
         jsonmqtt["idx"] = config.domz.idx_txt;
         jsonmqtt["nvalue"] = 0;
         String svalue = "";
         svalue += tinfo_values["ADCO"].c_str();
         jsonmqtt["svalue"] = svalue.c_str();
 
-        jsonmqtt.printTo(jsonmqttStr);
+        serializeJson(jsonmqtt, jsonmqttStr);
 
         if (!mqttPost(config.domz.topic, jsonmqttStr.c_str()))
         {
@@ -436,8 +437,7 @@ boolean domoticzPost(void)
       if (config.domz.bmode & CFG_BMODE_MQTT)
       {
         String jsonmqttStr;
-        StaticJsonBuffer<200> jsonBuffer;
-        JsonObject& jsonmqtt = jsonBuffer.createObject();
+        StaticJsonDocument<200> jsonmqtt;
         jsonmqtt["idx"] = config.domz.idx_p1sm;
         jsonmqtt["nvalue"] = 0;
         String svalue = "";
@@ -447,7 +447,7 @@ boolean domoticzPost(void)
         svalue += ";0";
         jsonmqtt["svalue"] = svalue.c_str();
 
-        jsonmqtt.printTo(jsonmqttStr);
+        serializeJson(jsonmqtt, jsonmqttStr);
 
         if (!mqttPost(config.domz.topic, jsonmqttStr.c_str()))
         {
@@ -479,15 +479,15 @@ boolean domoticzPost(void)
       if (config.domz.bmode & CFG_BMODE_MQTT)
       {
         String jsonmqttStr;
-        StaticJsonBuffer<200> jsonBuffer;
-        JsonObject& jsonmqtt = jsonBuffer.createObject();
+        StaticJsonDocument<200> jsonmqtt;
+        
         jsonmqtt["idx"] = config.domz.idx_crt;
         jsonmqtt["nvalue"] = 0;
         String svalue = "";
         svalue += String(atoi(tinfo_values["IINST"].c_str())).c_str();
         jsonmqtt["svalue"] = svalue.c_str();
 
-        jsonmqtt.printTo(jsonmqttStr);
+        serializeJson(jsonmqtt, jsonmqttStr);
 
         if (!mqttPost(config.domz.topic, jsonmqttStr.c_str()))
         {
@@ -519,15 +519,15 @@ boolean domoticzPost(void)
       if (config.domz.bmode & CFG_BMODE_MQTT)
       {
         String jsonmqttStr;
-        StaticJsonBuffer<200> jsonBuffer;
-        JsonObject& jsonmqtt = jsonBuffer.createObject();
+        StaticJsonDocument<200> jsonmqtt;
+        
         jsonmqtt["idx"] = config.domz.idx_elec;
         jsonmqtt["nvalue"] = 0;
         String svalue = "";
         svalue += String(atoi(tinfo_values["PAPP"].c_str())).c_str();
         jsonmqtt["svalue"] = svalue.c_str();
 
-        jsonmqtt.printTo(jsonmqttStr);
+        serializeJson(jsonmqtt, jsonmqttStr);
 
         if (!mqttPost(config.domz.topic, jsonmqttStr.c_str()))
         {
@@ -561,8 +561,8 @@ boolean domoticzPost(void)
       if (config.domz.bmode & CFG_BMODE_MQTT)
       {
         String jsonmqttStr;
-        StaticJsonBuffer<200> jsonBuffer;
-        JsonObject& jsonmqtt = jsonBuffer.createObject();
+        StaticJsonDocument<200> jsonmqtt;
+        
         jsonmqtt["idx"] = config.domz.idx_kwh;
         jsonmqtt["nvalue"] = 0;
         String svalue = "";
@@ -570,7 +570,9 @@ boolean domoticzPost(void)
         svalue += ";0";
         jsonmqtt["svalue"] = svalue.c_str();
 
-        jsonmqtt.printTo(jsonmqttStr);
+        serializeJson(jsonmqtt, jsonmqttStr);
+        
+
 
         if (!mqttPost(config.domz.topic, jsonmqttStr.c_str()))
         {
@@ -602,15 +604,15 @@ boolean domoticzPost(void)
       if (config.domz.bmode & CFG_BMODE_MQTT)
       {
         String jsonmqttStr;
-        StaticJsonBuffer<200> jsonBuffer;
-        JsonObject& jsonmqtt = jsonBuffer.createObject();
+        StaticJsonDocument<200> jsonmqtt;
+        
         jsonmqtt["idx"] = config.domz.idx_pct;
         jsonmqtt["nvalue"] = 0;
         String svalue = "";
         svalue += String( roundf((atof(tinfo_values["IINST"].c_str()) * 100) / atof(tinfo_values["ISOUSC"].c_str()) * 100) / 100 ).c_str();
         jsonmqtt["svalue"] = svalue.c_str();
 
-        jsonmqtt.printTo(jsonmqttStr);
+        serializeJson(jsonmqtt, jsonmqttStr);
 
         if (!mqttPost(config.domz.topic, jsonmqttStr.c_str()))
         {
@@ -646,15 +648,15 @@ boolean domoticzPost(void)
     if (config.domz.bmode & CFG_BMODE_MQTT)
     {
       String jsonmqttStr;
-      StaticJsonBuffer<200> jsonBuffer;
-      JsonObject& jsonmqtt = jsonBuffer.createObject();
+      StaticJsonDocument<200> jsonmqtt;
+      
       jsonmqtt["idx"] = config.domz.idx_mcp3421;
       jsonmqtt["nvalue"] = 0;
       String svalue = "";
       svalue += String(mcp3421_power).c_str();
       jsonmqtt["svalue"] = svalue.c_str();
 
-      jsonmqtt.printTo(jsonmqttStr);
+      serializeJson(jsonmqtt, jsonmqttStr);
 
       if (!mqttPost(config.domz.topic, jsonmqttStr.c_str()))
       {
@@ -693,8 +695,8 @@ boolean domoticzPost(void)
     if (config.domz.bmode & CFG_BMODE_MQTT)
     {
       String jsonmqttStr;
-      StaticJsonBuffer<200> jsonBuffer;
-      JsonObject& jsonmqtt = jsonBuffer.createObject();
+      StaticJsonDocument<200> jsonmqtt;
+      
       jsonmqtt["idx"] = config.domz.idx_pct;
       jsonmqtt["nvalue"] = 0;
       String svalue = "";
@@ -704,7 +706,7 @@ boolean domoticzPost(void)
       svalue += ";0";
       jsonmqtt["svalue"] = svalue.c_str();
 
-      jsonmqtt.printTo(jsonmqttStr);
+      serializeJson(jsonmqtt, jsonmqttStr);
 
       if (!mqttPost(config.domz.topic, jsonmqttStr.c_str()))
       {
@@ -740,8 +742,8 @@ boolean domoticzPost(void)
     if (config.domz.bmode & CFG_BMODE_MQTT)
     {
       String jsonmqttStr;
-      StaticJsonBuffer<200> jsonBuffer;
-      JsonObject& jsonmqtt = jsonBuffer.createObject();
+      StaticJsonDocument<200> jsonmqtt;
+      
       jsonmqtt["idx"] = config.domz.idx_sht10;
       jsonmqtt["nvalue"] = 0;
       String svalue = "";
@@ -751,7 +753,7 @@ boolean domoticzPost(void)
       svalue += ";0";
       jsonmqtt["svalue"] = svalue.c_str();
 
-      jsonmqtt.printTo(jsonmqttStr);
+      serializeJson(jsonmqtt, jsonmqttStr);
 
       if (!mqttPost(config.domz.topic, jsonmqttStr.c_str()))
       {

@@ -289,15 +289,17 @@ void TInfo_setup()
       // we swap RXD1/RXD1 to RXD2/TXD2
       // Note that TXD2 is not used teleinfo is receive only
 
-#ifdef DEBUG_SERIAL1
+#ifdef TINFO_SERIAL
       //This section cause WDT reset, it seems to be related to second time calling Serial.begin(..)
       //Found old issue related but seems to be fixed
       //https://github.com/esp8266/Arduino/issues/2305
       TINFO_SERIAL.end();
-      DebugF("Setting up Serial ... ");
+      DebugF("Setting up Teleinfo on Serial ... ");
       TINFO_SERIAL.begin(1200, SERIAL_7E1);
-      DebugF("Swap Serial ... ");
-      TINFO_SERIAL.swap();
+      //DebugF("Swap Serial ... ");
+      //TINFO_SERIAL.swap();
+#else
+      DebugF("No Teleinfo Serial defined ... ");
 #endif
 
       // Init teleinfo
@@ -319,7 +321,7 @@ void TInfo_setup()
 
 void handle_tinfo()
 {
-  #ifdef DEBUG_SERIAL1
+  #ifdef TINFO_SERIAL
   char c;
   // Handle teleinfo serial
   if ( TINFO_SERIAL.available() ) {
