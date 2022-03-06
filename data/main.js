@@ -458,15 +458,17 @@ function refreshSpiffs() {
     wsSend('$spiffs');
     $.getJSON(urls['spiffs'], function (spiffs_data) {
             console.log("trying to parse spiffs_data..")
-            var pb, pe, cl;
-            total = spiffs_data.spiffs[0].Total;
-            used = spiffs_data.spiffs[0].Used;
-            freeram = spiffs_data.spiffs[0].Ram;
-
+            
             $('#tab_fs_data').bootstrapTable('load', spiffs_data.files, {
                 silent: true,
                 showLoading: true
             });
+            
+            var pb, pe, cl;
+            total = spiffs_data.spiffs.Total;
+            used = spiffs_data.spiffs.Used;
+            freeram = spiffs_data.spiffs.Ram;
+
 
             pe = parseInt(used * 100 / total);
             if (isNaN(pe))
@@ -519,12 +521,14 @@ function fillConfigForm(data) {
     var cfg_rgb = data["cfg_rgb"] == 1 ? true : false;
     var cfg_oled = data["cfg_oled"] == 1 ? true : false;
     var cfg_static = data["cfg_static"] == 1 ? true : false;
-
+    
     //var tinfo_pwr_led = JSON.parse("[" + data["tinfo_pwr_led"] + "]");
     //var tinfo_nrj_led = JSON.parse("[" + data["tinfo_nrj_led"] + "]");
+    
     var sens_temp_led = JSON.parse("[" + data["sens_temp_led"] + "]");
     var sens_hum_led = JSON.parse("[" + data["sens_hum_led"] + "]");
     var sens_pwr_led = JSON.parse("[" + data["sens_pwr_led"] + "]");
+    
     var led_panel = data["led_panel"];
 
 
@@ -610,7 +614,7 @@ function fillConfigForm(data) {
             return sliderFormatter('tinfo', v, 'led', 'A');
         }
     });
-    */
+        */
     $("#sens_temp_led").slider({
         id: "slider_temp_led",
         value: sens_temp_led,
@@ -625,6 +629,7 @@ function fillConfigForm(data) {
             return sliderFormatter('sens', v, 'led', '%');
         }
     });
+
     $("#sens_pwr_led").slider({
         id: "slider_pwr_led",
         value: sens_pwr_led,
